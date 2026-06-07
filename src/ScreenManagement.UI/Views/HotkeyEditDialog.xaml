@@ -1,0 +1,90 @@
+<Window x:Class="ScreenManagement.UI.Views.HotkeyEditDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:vm="clr-namespace:ScreenManagement.UI.ViewModels"
+        xmlns:models="clr-namespace:ScreenManagement.Business.Models;assembly=ScreenManagement.Business"
+        mc:Ignorable="d"
+        Title="{Binding Title}" Height="420" Width="400"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="NoResize"
+        Background="{StaticResource WindowBackgroundBrush}"
+        d:DataContext="{d:DesignInstance Type=vm:HotkeyEditViewModel}">
+
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- 动作类型 -->
+        <StackPanel Grid.Row="0" Margin="0,0,0,12">
+            <TextBlock Text="动作类型" FontSize="12" Margin="0,0,0,4"/>
+            <ComboBox SelectedIndex="0" Height="32">
+                <ComboBoxItem Content="切换显示模式"/>
+                <ComboBoxItem Content="切换 HDR"/>
+            </ComboBox>
+        </StackPanel>
+
+        <!-- 目标模式 -->
+        <StackPanel Grid.Row="1" Margin="0,0,0,12">
+            <TextBlock Text="目标模式" FontSize="12" Margin="0,0,0,4"/>
+            <ComboBox SelectedItem="{Binding TargetMode}" Height="32"
+                      ItemsSource="{Binding Source={x:Static models:DisplayMode.Extend}}">
+                <!-- 使用静态枚举值 -->
+            </ComboBox>
+        </StackPanel>
+
+        <!-- 显示目标显示器列表（切换HDR时） -->
+        <StackPanel Grid.Row="2" Margin="0,0,0,12"
+                    Visibility="Collapsed">
+            <TextBlock Text="目标显示器" FontSize="12" Margin="0,0,0,4"/>
+            <ComboBox Height="32" ItemsSource="{Binding AvailableDisplays}"
+                      DisplayMemberPath="DisplayName"
+                      SelectedValuePath="DeviceId"
+                      SelectedValue="{Binding TargetDisplayId}"/>
+        </StackPanel>
+
+        <!-- 修饰键 -->
+        <StackPanel Grid.Row="3" Margin="0,0,0,12">
+            <TextBlock Text="修饰键" FontSize="12" Margin="0,0,0,6"/>
+            <WrapPanel>
+                <CheckBox Content="Ctrl" IsChecked="{Binding CtrlModifier}"
+                          Margin="0,0,16,4" FontSize="13"/>
+                <CheckBox Content="Alt" IsChecked="{Binding AltModifier}"
+                          Margin="0,0,16,4" FontSize="13"/>
+                <CheckBox Content="Shift" IsChecked="{Binding ShiftModifier}"
+                          Margin="0,0,16,4" FontSize="13"/>
+                <CheckBox Content="Win" IsChecked="{Binding WinModifier}"
+                          FontSize="13"/>
+            </WrapPanel>
+        </StackPanel>
+
+        <!-- 按键 -->
+        <StackPanel Grid.Row="4" Margin="0,0,0,12">
+            <TextBlock Text="按键" FontSize="12" Margin="0,0,0,4"/>
+            <Button Height="40" FontSize="16" FontWeight="Bold"
+                    Content="{Binding KeyDisplay}"
+                    Style="{StaticResource SecondaryButtonStyle}"
+                    Command="{Binding StartKeyCaptureCommand}"/>
+            <TextBlock Text="{Binding ConflictMessage}" FontSize="11"
+                       Foreground="Orange" Margin="0,4,0,0"/>
+        </StackPanel>
+
+        <!-- 底部操作 -->
+        <StackPanel Grid.Row="6" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,12,0,0">
+            <Button Content="确定" Width="80" Height="32"
+                    Style="{StaticResource PrimaryButtonStyle}"
+                    Command="{Binding ConfirmCommand}" Margin="0,0,8,0"/>
+            <Button Content="取消" Width="80" Height="32"
+                    Style="{StaticResource SecondaryButtonStyle}"
+                    Command="{Binding CancelCommand}"/>
+        </StackPanel>
+    </Grid>
+</Window>

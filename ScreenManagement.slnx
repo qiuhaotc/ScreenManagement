@@ -1,0 +1,7 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/ScreenManagement.Business/ScreenManagement.Business.csproj" />
+    <Project Path="src/ScreenManagement.Test/ScreenManagement.Test.csproj" />
+    <Project Path="src/ScreenManagement.UI/ScreenManagement.UI.csproj" Id="cfd11c42-0cf5-47ee-8776-cc493c6b4d3f" />
+  </Folder>
+</Solution>

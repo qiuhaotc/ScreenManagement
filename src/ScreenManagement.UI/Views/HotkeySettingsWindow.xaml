@@ -1,0 +1,95 @@
+<Window x:Class="ScreenManagement.UI.Views.HotkeySettingsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:vm="clr-namespace:ScreenManagement.UI.ViewModels"
+        mc:Ignorable="d"
+        Title="快捷键设置" Height="500" Width="600"
+        WindowStartupLocation="CenterOwner"
+        Background="{StaticResource WindowBackgroundBrush}"
+        d:DataContext="{d:DesignInstance Type=vm:HotkeySettingsViewModel}">
+
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- 标题 -->
+        <StackPanel Grid.Row="0" Margin="0,0,0,16">
+            <TextBlock Text="快捷键设置" FontSize="18" FontWeight="SemiBold"/>
+            <TextBlock Text="{Binding ConflictStatus}" FontSize="12"
+                       Foreground="{StaticResource SecondaryTextBrush}" Margin="0,4,0,0"/>
+        </StackPanel>
+
+        <!-- 快捷键列表 -->
+        <Border Grid.Row="1" Margin="0,0,0,16"
+                Background="{StaticResource CardBackgroundBrush}"
+                CornerRadius="8" Padding="8">
+            <ScrollViewer VerticalScrollBarVisibility="Auto">
+                <ItemsControl ItemsSource="{Binding Bindings}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Border Margin="4,4" Padding="12,10"
+                                    Background="{StaticResource ItemBackgroundBrush}"
+                                    CornerRadius="6">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <!-- 快捷键信息 -->
+                                    <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding ActionDescription}"
+                                                   FontSize="13" FontWeight="SemiBold"/>
+                                        <TextBlock Text="{Binding HotkeyDisplay}"
+                                                   FontSize="14"
+                                                   Foreground="{StaticResource AccentBrush}"
+                                                   FontWeight="Bold" Margin="0,2,0,0"/>
+                                    </StackPanel>
+
+                                    <!-- 操作按钮 -->
+                                    <StackPanel Grid.Column="1" Orientation="Horizontal"
+                                                VerticalAlignment="Center">
+                                        <Button Content="✎" Width="32" Height="28"
+                                                FontSize="12" Margin="0,0,4,0"
+                                                Style="{StaticResource IconButtonStyle}"
+                                                Command="{Binding DataContext.EditBindingCommand,
+                                                    RelativeSource={RelativeSource AncestorType=Window}}"
+                                                CommandParameter="{Binding}"/>
+                                        <Button Content="🗑" Width="32" Height="28"
+                                                FontSize="12"
+                                                Style="{StaticResource IconButtonStyle}"
+                                                Command="{Binding DataContext.DeleteBindingCommand,
+                                                    RelativeSource={RelativeSource AncestorType=Window}}"
+                                                CommandParameter="{Binding}"/>
+                                    </StackPanel>
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+        </Border>
+
+        <!-- 添加按钮 -->
+        <Button Grid.Row="2" Content="+ 添加快捷键" Height="36"
+                Margin="0,0,0,16"
+                Style="{StaticResource SecondaryButtonStyle}"
+                Command="{Binding AddBindingCommand}"/>
+
+        <!-- 底部操作 -->
+        <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right">
+            <Button Content="保存" Width="80" Height="32"
+                    Style="{StaticResource PrimaryButtonStyle}"
+                    Command="{Binding SaveCommand}" Margin="0,0,8,0"/>
+            <Button Content="取消" Width="80" Height="32"
+                    Style="{StaticResource SecondaryButtonStyle}"
+                    Command="{Binding CloseCommand}"/>
+        </StackPanel>
+    </Grid>
+</Window>
