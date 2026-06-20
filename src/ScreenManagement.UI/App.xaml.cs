@@ -80,7 +80,7 @@ public partial class App : System.Windows.Application
 
         // 3. 初始化系统托盘
         var trayService = GetRequiredService<TrayIconService>();
-        trayService.Initialize();
+        trayService.Initialize(config);
         trayService.ShowWindowRequested += (s, e) =>
         {
             var window = MainWindow ?? GetRequiredService<MainWindow>();

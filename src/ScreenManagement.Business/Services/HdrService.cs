@@ -9,6 +9,9 @@ public class HdrService : IHdrService
 {
     private readonly ILogger<HdrService> _logger;
 
+    /// <inheritdoc />
+    public event EventHandler? HdrStateChanged;
+
     public HdrService(
         ILogger<HdrService> logger)
     {
@@ -85,6 +88,7 @@ public class HdrService : IHdrService
                 }
 
                 _logger.LogInformation("HDR set to {Enabled} for display {DisplayId}", enable, displayId);
+                HdrStateChanged?.Invoke(this, EventArgs.Empty);
                 return true;
             }
             catch (Exception ex)

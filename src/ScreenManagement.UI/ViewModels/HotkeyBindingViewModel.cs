@@ -60,15 +60,21 @@ public partial class HotkeyBindingViewModel : ObservableObject
     }
 
     /// <summary>获取动作描述</summary>
-    public static string GetActionDescription(HotkeyBinding model) => model.ActionType switch
+    public static string GetActionDescription(HotkeyBinding model)
     {
-        HotkeyActionType.SetDisplayMode => $"切换到\"{MainViewModel.GetModeDisplayName(model.TargetMode ?? DisplayMode.Extend)}\"",
-        HotkeyActionType.ToggleHdr => model.HdrTargetState.HasValue
-            ? $"设置 HDR {(model.HdrTargetState.Value ? "开启" : "关闭")}"
-            : $"切换 HDR ({model.TargetDisplayId ?? "全部"})",
-        HotkeyActionType.CompositeAction => $"组合动作 ({model.SubActions?.Count ?? 0} 项)",
-        _ => "未知动作"
-    };
+        if (!string.IsNullOrWhiteSpace(model.Name))
+            return model.Name;
+
+        return model.ActionType switch
+        {
+            HotkeyActionType.SetDisplayMode => $"切换到\"{MainViewModel.GetModeDisplayName(model.TargetMode ?? DisplayMode.Extend)}\"",
+            HotkeyActionType.ToggleHdr => model.HdrTargetState.HasValue
+                ? $"设置 HDR {(model.HdrTargetState.Value ? "开启" : "关闭")}"
+                : $"切换 HDR ({model.TargetDisplayId ?? "全部"})",
+            HotkeyActionType.CompositeAction => $"组合动作 ({model.SubActions?.Count ?? 0} 项)",
+            _ => "未知动作"
+        };
+    }
 
     private static string VirtualKeyToString(uint key) => key switch
     {

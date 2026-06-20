@@ -28,6 +28,9 @@ public class HotkeyBinding
     /// <summary>虚拟键码</summary>
     public uint Key { get; set; }
 
+    /// <summary>自定义名称（显示在列表和托盘菜单中）</summary>
+    public string? Name { get; set; }
+
     /// <summary>是否启用</summary>
     public bool IsEnabled { get; set; } = true;
 

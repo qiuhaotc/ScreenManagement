@@ -80,15 +80,11 @@ public partial class MainViewModel : ObservableObject
         try
         {
             var success = await _hdrService.ToggleHdrAsync(display.DeviceId);
-            if (success)
-            {
-                await RefreshDisplaysAsync();
-                StatusMessage = $"已{(display.HdrEnabled ? "关闭" : "开启")} {display.DisplayName} 的 HDR";
-            }
-            else
-            {
-                StatusMessage = $"HDR 切换失败";
-            }
+            // UI 刷新由 HdrStateChanged → MonitorEnumerationService.RefreshAsync
+            // → DisplaysChanged → MainWindow.OnDisplaysChanged 事件链完成
+            StatusMessage = success
+                ? $"已切换 {display.DisplayName} 的 HDR"
+                : "HDR 切换失败";
         }
         catch (Exception ex)
         {

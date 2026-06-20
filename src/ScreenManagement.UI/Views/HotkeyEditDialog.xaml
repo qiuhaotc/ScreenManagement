@@ -20,6 +20,13 @@
     <ScrollViewer VerticalScrollBarVisibility="Auto">
         <StackPanel Margin="20">
 
+            <!-- ── 自定义名称 ── -->
+            <TextBlock Text="名称（可选，留空则自动生成描述）" FontSize="12" Margin="0,0,0,4"/>
+            <TextBox Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}"
+                     Height="32" Margin="0,0,0,14"
+                     Padding="8,4" VerticalContentAlignment="Center"
+                     MaxLength="80"/>
+
             <!-- ── 动作类型 ── -->
             <TextBlock Text="动作类型" FontSize="12" Margin="0,0,0,4"/>
             <ComboBox SelectedIndex="{Binding ActionTypeIndex}" Height="32" Margin="0,0,0,14">

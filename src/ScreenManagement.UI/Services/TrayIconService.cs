@@ -16,6 +16,10 @@ public class TrayIconService : IDisposable
     private Bitmap? _iconBitmap;
     private IntPtr _iconHandle = IntPtr.Zero;
 
+    // 缓存：避免 DropDownOpening 中的 async/await 竞态问题
+    private List<ScreenManagement.Business.Models.DisplayInfo> _cachedDisplays = new();
+    private List<ScreenManagement.Business.Models.HotkeyBinding> _cachedHotkeyBindings = new();
+
     private readonly IDisplayService _displayService;
     private readonly IHdrService _hdrService;
     private readonly IMonitorEnumerationService _monitorService;
@@ -40,8 +44,12 @@ public class TrayIconService : IDisposable
     }
 
     /// <summary>初始化托盘图标</summary>
-    public void Initialize()
+    public void Initialize(ScreenManagement.Business.Models.AppConfig initialConfig)
     {
+        // 缓存初始快捷键绑定
+        _cachedHotkeyBindings = initialConfig.HotkeyBindings
+            ?.Where(b => b.IsEnabled).ToList() ?? new();
+
         _notifyIcon = new System.Windows.Forms.NotifyIcon
         {
             Icon = CreateMonitorIcon(Color.FromArgb(255, 37, 99, 235)),
@@ -54,6 +62,19 @@ public class TrayIconService : IDisposable
         _notifyIcon.BalloonTipClicked += (s, e) => ShowWindowRequested?.Invoke(this, EventArgs.Empty);
 
         _displayService.DisplayModeChanged += OnDisplayModeChanged;
+
+        // 显示器变更时更新缓存（包含 HDR 状态）
+        _monitorService.DisplaysChanged += (s, displays) =>
+        {
+            _cachedDisplays = displays.ToList();
+        };
+
+        // 配置保存时更新快捷键缓存
+        _configService.ConfigChanged += (s, config) =>
+        {
+            _cachedHotkeyBindings = config.HotkeyBindings
+                ?.Where(b => b.IsEnabled).ToList() ?? new();
+        };
     }
 
     /// <summary>构建右键菜单</summary>
@@ -71,11 +92,11 @@ public class TrayIconService : IDisposable
 
         // ── HDR 子菜单 ──
         var hdrMenu = new System.Windows.Forms.ToolStripMenuItem("✨  HDR");
-        hdrMenu.DropDownOpening += async (s, e) =>
+        hdrMenu.DropDownOpening += (s, e) =>
         {
             hdrMenu.DropDownItems.Clear();
-            var displays = await _monitorService.GetDisplaysAsync();
-            foreach (var display in displays.Where(d => d.SupportsHdr))
+            var hdrDisplays = _cachedDisplays.Where(d => d.SupportsHdr).ToList();
+            foreach (var display in hdrDisplays)
             {
                 var item = new System.Windows.Forms.ToolStripMenuItem(
                     $"{display.DisplayName}  HDR {(display.HdrEnabled ? "● 开" : "○ 关")}")
@@ -94,19 +115,17 @@ public class TrayIconService : IDisposable
 
         // ── 快捷键动作子菜单 ──
         var hotkeyMenu = new System.Windows.Forms.ToolStripMenuItem("⌨  快捷键动作");
-        hotkeyMenu.DropDownOpening += async (s, e) =>
+        hotkeyMenu.DropDownOpening += (s, e) =>
         {
             hotkeyMenu.DropDownItems.Clear();
-            var config = await _configService.LoadAsync();
-            var bindings = config.HotkeyBindings.Where(b => b.IsEnabled).ToList();
 
-            if (bindings.Count == 0)
+            if (_cachedHotkeyBindings.Count == 0)
             {
                 hotkeyMenu.DropDownItems.Add(new System.Windows.Forms.ToolStripLabel("未配置快捷键") { Enabled = false });
                 return;
             }
 
-            foreach (var binding in bindings)
+            foreach (var binding in _cachedHotkeyBindings)
             {
                 var desc = HotkeyBindingViewModel.GetActionDescription(binding);
                 var hotkey = HotkeyBindingViewModel.FormatHotkey(binding.Modifiers, binding.Key);

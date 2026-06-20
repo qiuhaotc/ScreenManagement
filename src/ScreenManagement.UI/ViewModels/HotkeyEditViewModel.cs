@@ -12,6 +12,7 @@ namespace ScreenManagement.UI.ViewModels;
 public partial class HotkeyEditViewModel : ObservableObject
 {
     [ObservableProperty] private HotkeyActionType _actionType = HotkeyActionType.SetDisplayMode;
+    [ObservableProperty] private string _name = string.Empty;
     [ObservableProperty] private DisplayMode? _targetMode = DisplayMode.Extend;
     [ObservableProperty] private string? _targetDisplayId;
     [ObservableProperty] private int _hdrModeIndex; // 0=切换, 1=开启, 2=关闭
@@ -80,6 +81,7 @@ public partial class HotkeyEditViewModel : ObservableObject
         {
             Title = "编辑快捷键";
             _editId = existing.Id;
+            Name = existing.Name ?? string.Empty;
             ActionType = existing.ActionType;
             TargetMode = existing.TargetMode;
             TargetDisplayId = existing.TargetDisplayId;
@@ -118,6 +120,7 @@ public partial class HotkeyEditViewModel : ObservableObject
     public HotkeyBinding ToModel() => new()
     {
         Id = _editId ?? Guid.NewGuid().ToString(),
+        Name = string.IsNullOrWhiteSpace(Name) ? null : Name.Trim(),
         ActionType = ActionType,
         TargetMode = IsSetDisplayMode ? TargetMode : null,
         TargetDisplayId = IsToggleHdr ? TargetDisplayId : null,

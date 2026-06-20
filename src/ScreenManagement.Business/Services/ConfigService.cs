@@ -12,6 +12,9 @@ public class ConfigService : IConfigService
     private readonly string _configDir;
     private readonly string _configFile;
 
+    /// <inheritdoc />
+    public event EventHandler<AppConfig>? ConfigChanged;
+
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         WriteIndented = true,
@@ -76,6 +79,7 @@ public class ConfigService : IConfigService
             await File.WriteAllTextAsync(_configFile, json);
 
             _logger.LogInformation("Config saved to {Path}", _configFile);
+            ConfigChanged?.Invoke(this, config);
         }
         catch (Exception ex)
         {

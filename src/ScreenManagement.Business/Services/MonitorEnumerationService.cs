@@ -19,6 +19,9 @@ public class MonitorEnumerationService : IMonitorEnumerationService
     {
         _logger = logger;
         _hdrService = hdrService;
+
+        // HDR 状态变更时自动刷新缓存
+        _hdrService.HdrStateChanged += async (s, e) => await RefreshAsync();
     }
 
     /// <inheritdoc />

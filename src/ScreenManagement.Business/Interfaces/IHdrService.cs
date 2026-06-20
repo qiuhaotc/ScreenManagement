@@ -3,6 +3,9 @@ namespace ScreenManagement.Business.Interfaces;
 /// <summary>HDR 管理服务</summary>
 public interface IHdrService
 {
+    /// <summary>HDR 状态改变时触发</summary>
+    event EventHandler? HdrStateChanged;
+
     /// <summary>获取指定显示器的 HDR 状态</summary>
     Task<bool> IsHdrEnabledAsync(string displayId);
 
