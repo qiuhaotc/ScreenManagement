@@ -26,9 +26,7 @@ public class ConfigService : IConfigService
     public ConfigService(ILogger<ConfigService> logger)
     {
         _logger = logger;
-        _configDir = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-            "ScreenManagement");
+        _configDir = AppContext.BaseDirectory;
         _configFile = Path.Combine(_configDir, "config.json");
     }
 

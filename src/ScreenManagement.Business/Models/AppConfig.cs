@@ -12,7 +12,7 @@ public class AppConfig
     public bool AutoStart { get; set; }
 
     /// <summary>启动时最小化到托盘</summary>
-    public bool StartMinimized { get; set; } = true;
+    public bool StartMinimized { get; set; } = false;
 
     /// <summary>是否显示切换通知</summary>
     public bool ShowNotifications { get; set; } = true;
@@ -30,33 +30,33 @@ public class AppConfig
         {
             HotkeyBindings = new List<HotkeyBinding>
             {
-                new()
-                {
-                    ActionType = HotkeyActionType.SetDisplayMode,
-                    TargetMode = DisplayMode.Internal,
-                    Modifiers = ModifierKeys.Control | ModifierKeys.Shift,
-                    Key = 0x70, // F1
-                    IsEnabled = true
-                },
-                new()
-                {
-                    ActionType = HotkeyActionType.SetDisplayMode,
-                    TargetMode = DisplayMode.Extend,
-                    Modifiers = ModifierKeys.Control | ModifierKeys.Shift,
-                    Key = 0x71, // F2
-                    IsEnabled = true
-                },
-                new()
-                {
-                    ActionType = HotkeyActionType.SetDisplayMode,
-                    TargetMode = DisplayMode.External,
-                    Modifiers = ModifierKeys.Control | ModifierKeys.Shift,
-                    Key = 0x72, // F3
-                    IsEnabled = true
-                }
+                //new()
+                //{
+                //    ActionType = HotkeyActionType.SetDisplayMode,
+                //    TargetMode = DisplayMode.Internal,
+                //    Modifiers = ModifierKeys.Control | ModifierKeys.Shift,
+                //    Key = 0x70, // F1
+                //    IsEnabled = true
+                //},
+                //new()
+                //{
+                //    ActionType = HotkeyActionType.SetDisplayMode,
+                //    TargetMode = DisplayMode.Extend,
+                //    Modifiers = ModifierKeys.Control | ModifierKeys.Shift,
+                //    Key = 0x71, // F2
+                //    IsEnabled = true
+                //},
+                //new()
+                //{
+                //    ActionType = HotkeyActionType.SetDisplayMode,
+                //    TargetMode = DisplayMode.External,
+                //    Modifiers = ModifierKeys.Control | ModifierKeys.Shift,
+                //    Key = 0x72, // F3
+                //    IsEnabled = true
+                //}
             },
             AutoStart = false,
-            StartMinimized = true,
+            StartMinimized = false,
             ShowNotifications = true,
             Language = "zh-CN"
         };

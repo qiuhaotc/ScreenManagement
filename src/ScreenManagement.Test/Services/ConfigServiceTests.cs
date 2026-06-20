@@ -29,7 +29,7 @@ public class ConfigServiceTests
         config.Should().NotBeNull();
         config.HotkeyBindings.Should().NotBeEmpty();
         config.Language.Should().Be("zh-CN");
-        config.StartMinimized.Should().BeTrue();
+        config.StartMinimized.Should().BeFalse();
     }
 
     [Fact]

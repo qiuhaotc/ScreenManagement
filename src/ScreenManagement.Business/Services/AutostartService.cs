@@ -43,14 +43,7 @@ public class AutostartService : IAutostartService
             if (enable)
             {
                 var exePath = Environment.ProcessPath ?? "";
-                var commandLine = $"\"{exePath}\"";
-
-                // 检查是否有 --minimized 参数需要保留
-                var args = Environment.GetCommandLineArgs();
-                if (args.Contains("--minimized"))
-                {
-                    commandLine += " --minimized";
-                }
+                var commandLine = $"\"{exePath}\" --minimized";
 
                 key?.SetValue(AppName, commandLine);
                 _logger.LogInformation("Autostart enabled: {Command}", commandLine);

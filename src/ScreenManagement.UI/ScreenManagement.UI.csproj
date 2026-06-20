@@ -9,7 +9,13 @@
     <UseWindowsForms>true</UseWindowsForms>
     <RootNamespace>ScreenManagement.UI</RootNamespace>
     <AssemblyName>ScreenManagement.UI</AssemblyName>
+    <ApplicationIcon>app.ico</ApplicationIcon>
+    <AssemblyTitle>屏幕管理|Screen Management</AssemblyTitle>
   </PropertyGroup>
+
+  <ItemGroup>
+    <Resource Include="app.ico" />
+  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
