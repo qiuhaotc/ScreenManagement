@@ -4,6 +4,16 @@
 
 一个轻量级 Windows 屏幕管理工具，通过全局快捷键和系统托盘快速切换显示模式和 HDR 状态。
 
+## 📸 界面截图
+
+### 主界面
+
+![主界面](docs/screenshots/main-window.png)
+
+### 快捷键配置
+
+![快捷键配置](docs/screenshots/hotkey-settings.png)
+
 ## ✨ 功能
 
 - 🖥 **一键切换显示模式**: 仅电脑屏幕 / 复制 / 扩展 / 仅第二屏幕

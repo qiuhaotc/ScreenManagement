@@ -59,36 +59,43 @@ public class MonitorEnumerationService : IMonitorEnumerationService
     private List<DisplayInfo> EnumerateActiveDisplays()
     {
         var displays = new List<DisplayInfo>();
+        var seenTargets = new HashSet<string>();
 
-        // 仅查询活动路径，避免列出 GPU 上所有未连接的物理接口
-        int error = NativeMethods.GetDisplayConfigBufferSizes(
-            NativeTypes.QDC_ONLY_ACTIVE_PATHS,
-            out uint pathCount, out uint modeCount);
+        // 第一步：查询活动路径，获取完整的分辨率、刷新率等信息
+        EnumerateDisplayPaths(NativeTypes.QDC_ONLY_ACTIVE_PATHS, displays, seenTargets, markAsActive: true);
 
+        // 第二步：查询所有路径，将已连接但当前未激活的显示器也加入列表
+        EnumerateDisplayPaths(NativeTypes.QDC_ALL_PATHS, displays, seenTargets, markAsActive: false);
+
+        _logger.LogInformation("Enumerated {Total} display(s) ({Active} active, {Inactive} inactive)",
+            displays.Count,
+            displays.Count(d => d.IsActive),
+            displays.Count(d => !d.IsActive));
+
+        return displays;
+    }
+
+    /// <summary>按指定标志枚举显示路径，将结果追加到 displays 列表中</summary>
+    private void EnumerateDisplayPaths(uint flags, List<DisplayInfo> displays, HashSet<string> seenTargets, bool markAsActive)
+    {
+        int error = NativeMethods.GetDisplayConfigBufferSizes(flags, out uint pathCount, out uint modeCount);
         if (error != NativeTypes.ERROR_SUCCESS)
         {
-            _logger.LogWarning("GetDisplayConfigBufferSizes failed: {Error}", error);
-            return displays;
+            _logger.LogWarning("GetDisplayConfigBufferSizes(flags={Flags}) failed: {Error}", flags, error);
+            return;
         }
 
         var paths = new DISPLAYCONFIG_PATH_INFO[pathCount];
         var modes = new DISPLAYCONFIG_MODE_INFO[modeCount];
-
-        error = NativeMethods.QueryDisplayConfig(
-            NativeTypes.QDC_ONLY_ACTIVE_PATHS,
-            ref pathCount, paths,
-            ref modeCount, modes,
-            IntPtr.Zero);
-
+        error = NativeMethods.QueryDisplayConfig(flags, ref pathCount, paths, ref modeCount, modes, IntPtr.Zero);
         if (error != NativeTypes.ERROR_SUCCESS)
         {
-            _logger.LogWarning("QueryDisplayConfig failed: {Error}", error);
-            return displays;
+            _logger.LogWarning("QueryDisplayConfig(flags={Flags}) failed: {Error}", flags, error);
+            return;
         }
 
-        // 用于去重：同一物理显示器在克隆模式下可能出现在多条路径中
-        var seenTargets = new HashSet<string>();
-        bool firstActive = true;
+        // 仅在枚举活动路径时才判断"第一个"作为主显示器
+        bool firstActive = markAsActive;
 
         for (int i = 0; i < pathCount; i++)
         {
@@ -100,13 +107,19 @@ public class MonitorEnumerationService : IMonitorEnumerationService
                 continue;
 
             // 获取显示器友好名称与输出技术
-            var (friendlyName, outputTechnology, _) =
+            var (friendlyName, outputTechnology, success) =
                 GetTargetDeviceName(path.targetInfo.adapterId, path.targetInfo.id);
 
             bool isInternal =
                 outputTechnology == NativeTypes.DISPLAYCONFIG_OUTPUT_TECHNOLOGY_INTERNAL ||
                 outputTechnology == NativeTypes.DISPLAYCONFIG_OUTPUT_TECHNOLOGY_DISPLAYPORT_EMBEDDED ||
                 outputTechnology == NativeTypes.DISPLAYCONFIG_OUTPUT_TECHNOLOGY_UDI_EMBEDDED;
+
+            // 在"所有路径"查询中，判断是否为真实物理连接的显示器：
+            // 必须满足 GetTargetDeviceName 成功，且拥有 EDID 友好名称（证明有真实显示器），
+            // 或者是内置显示器（嵌入式面板通常无 EDID 名称）。
+            if (!markAsActive && (!success || (string.IsNullOrWhiteSpace(friendlyName) && !isInternal)))
+                continue;
 
             var display = new DisplayInfo
             {
@@ -115,30 +128,34 @@ public class MonitorEnumerationService : IMonitorEnumerationService
                     ? friendlyName
                     : (isInternal ? "内置显示器" : $"显示器 {displays.Count + 1}"),
                 IsInternal = isInternal,
-                IsPrimary = firstActive,
+                IsActive = markAsActive,
+                IsPrimary = markAsActive && firstActive,
                 AdapterId = (uint)(path.targetInfo.adapterId & 0xFFFFFFFF),
                 SourceId = path.sourceInfo.id
             };
 
-            firstActive = false;
-
-            // 分辨率：从 source 模式信息读取
-            uint srcIdx = path.sourceInfo.modeInfoIdx;
-            if (srcIdx != NativeTypes.DISPLAYCONFIG_PATH_MODE_IDX_INVALID && srcIdx < modeCount)
+            if (markAsActive)
             {
-                var srcMode = modes[srcIdx].info.sourceMode;
-                display.ResolutionX = (int)srcMode.width;
-                display.ResolutionY = (int)srcMode.height;
+                firstActive = false;
+
+                // 分辨率：从 source 模式信息读取
+                uint srcIdx = path.sourceInfo.modeInfoIdx;
+                if (srcIdx != NativeTypes.DISPLAYCONFIG_PATH_MODE_IDX_INVALID && srcIdx < modeCount)
+                {
+                    var srcMode = modes[srcIdx].info.sourceMode;
+                    display.ResolutionX = (int)srcMode.width;
+                    display.ResolutionY = (int)srcMode.height;
+                }
+
+                // 刷新率
+                if (path.targetInfo.refreshRate.Denominator > 0)
+                {
+                    display.RefreshRate = path.targetInfo.refreshRate.Numerator
+                                        / path.targetInfo.refreshRate.Denominator;
+                }
             }
 
-            // 刷新率
-            if (path.targetInfo.refreshRate.Denominator > 0)
-            {
-                display.RefreshRate = path.targetInfo.refreshRate.Numerator
-                                    / path.targetInfo.refreshRate.Denominator;
-            }
-
-            // HDR 支持与状态
+            // HDR 支持与状态（连接但未激活的显示器也可查询）
             try
             {
                 display.SupportsHdr = _hdrService.SupportsHdr(deviceId);
@@ -155,9 +172,6 @@ public class MonitorEnumerationService : IMonitorEnumerationService
 
             displays.Add(display);
         }
-
-        _logger.LogInformation("Enumerated {Count} active display(s)", displays.Count);
-        return displays;
     }
 
     /// <summary>获取目标显示器的友好名称和输出技术</summary>

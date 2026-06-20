@@ -2,6 +2,16 @@
 
 > A lightweight Windows display management utility for quick switching display modes and HDR states via global hotkeys and system tray.
 
+## 📸 Screenshots
+
+### Main Window
+
+![Main Window](docs/screenshots/main-window.png)
+
+### Hotkey Settings
+
+![Hotkey Settings](docs/screenshots/hotkey-settings.png)
+
 ## ✨ Features
 
 - 🖥 **One-click display mode switching**: PC screen only / Duplicate / Extend / Second screen only

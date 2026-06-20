@@ -98,6 +98,7 @@ public partial class HotkeySettingsViewModel : ObservableObject
         }
 
         ConflictStatus = "✅ 已保存";
+        Close();
     }
 
     [RelayCommand]

@@ -82,20 +82,26 @@ public class BoolToVisibilityConverter : IValueConverter
         => throw new NotSupportedException();
 }
 
-/// <summary>取反转换器</summary>
+/// <summary>取反转换器（支持 bool 和 Visibility 目标类型）</summary>
 public class NotConverter : IValueConverter
 {
     public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
     {
         if (value is bool b)
+        {
+            if (targetType == typeof(Visibility))
+                return b ? Visibility.Collapsed : Visibility.Visible;
             return !b;
-        return false;
+        }
+        return targetType == typeof(Visibility) ? Visibility.Collapsed : (object)false;
     }
 
     public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
     {
         if (value is bool b)
             return !b;
+        if (value is Visibility v)
+            return v != Visibility.Visible;
         return false;
     }
 }

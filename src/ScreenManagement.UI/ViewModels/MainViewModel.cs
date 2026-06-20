@@ -78,7 +78,9 @@ public partial class MainViewModel : ObservableObject
             if (success)
             {
                 CurrentMode = mode;
-                await RefreshDisplaysAsync();
+                // 等待 Windows 应用显示配置变更，然后重新枚举显示器
+                await Task.Delay(600);
+                await _monitorService.RefreshAsync();
             }
         }
         catch (Exception ex)

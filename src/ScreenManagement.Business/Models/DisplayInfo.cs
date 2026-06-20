@@ -15,6 +15,9 @@ public class DisplayInfo
     /// <summary>是否为内置显示器（笔记本屏幕）</summary>
     public bool IsInternal { get; set; }
 
+    /// <summary>当前显示模式下是否处于激活状态（未激活表示物理已连接但当前被禁用）</summary>
+    public bool IsActive { get; set; } = true;
+
     /// <summary>是否支持 HDR</summary>
     public bool SupportsHdr { get; set; }
 
