@@ -14,6 +14,11 @@ public partial class AboutWindow : Window
         InitializeComponent();
     }
 
+    public AboutWindow(ViewModels.AboutViewModel viewModel) : this()
+    {
+        DataContext = viewModel;
+    }
+
     private void GitHubLink_Click(object sender, MouseButtonEventArgs e)
     {
         if (DataContext is ViewModels.AboutViewModel vm)

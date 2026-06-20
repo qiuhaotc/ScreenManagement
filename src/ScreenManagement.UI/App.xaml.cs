@@ -90,12 +90,14 @@ public partial class App : System.Windows.Application
         };
         trayService.ExitRequested += (s, e) => Shutdown();
 
-        // 4. 判断启动模式
+        // 4. 创建主窗口并触发 HWND（EnsureHandle 不显示窗口）以便热键注册生效
+        var mainWindow = GetRequiredService<MainWindow>();
+        MainWindow = mainWindow;
+        new System.Windows.Interop.WindowInteropHelper(mainWindow).EnsureHandle();
+
         bool isAutostart = Environment.GetCommandLineArgs().Contains("--minimized");
         if (!config.StartMinimized && !isAutostart)
         {
-            var mainWindow = GetRequiredService<MainWindow>();
-            MainWindow = mainWindow;
             mainWindow.Show();
         }
     }

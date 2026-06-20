@@ -29,4 +29,7 @@ public interface IHotkeyService
 
     /// <summary>初始化窗口消息处理</summary>
     void Initialize(IntPtr hwnd);
+
+    /// <summary>处理 WM_HOTKEY 消息（由 UI 层窗口消息钩子调用）</summary>
+    void HandleHotkeyMessage(int hotkeyId);
 }

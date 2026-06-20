@@ -18,23 +18,34 @@ public partial class HotkeyBindingViewModel : ObservableObject
     [ObservableProperty] private bool _isEnabled = true;
     [ObservableProperty] private bool _hasConflict;
 
+    // 保留完整模型数据，确保 ToModel() 能还原所有字段
+    private HotkeyBinding? _sourceModel;
+
     /// <summary>还原为数据模型</summary>
-    public HotkeyBinding ToModel() => new()
+    public HotkeyBinding ToModel()
     {
-        Id = Id,
-        ActionType = ActionType,
-        IsEnabled = IsEnabled
-    };
+        if (_sourceModel != null)
+        {
+            _sourceModel.IsEnabled = IsEnabled;
+            return _sourceModel;
+        }
+        return new HotkeyBinding { Id = Id, ActionType = ActionType, IsEnabled = IsEnabled };
+    }
 
     /// <summary>从数据模型创建 ViewModel</summary>
-    public static HotkeyBindingViewModel FromModel(HotkeyBinding model) => new()
+    public static HotkeyBindingViewModel FromModel(HotkeyBinding model)
     {
-        Id = model.Id,
-        ActionType = model.ActionType,
-        ActionDescription = GetActionDescription(model),
-        HotkeyDisplay = FormatHotkey(model.Modifiers, model.Key),
-        IsEnabled = model.IsEnabled
-    };
+        var vm = new HotkeyBindingViewModel
+        {
+            Id = model.Id,
+            ActionType = model.ActionType,
+            ActionDescription = GetActionDescription(model),
+            HotkeyDisplay = FormatHotkey(model.Modifiers, model.Key),
+            IsEnabled = model.IsEnabled
+        };
+        vm._sourceModel = model;
+        return vm;
+    }
 
     /// <summary>格式化快捷键显示文本</summary>
     public static string FormatHotkey(ModifierKeys modifiers, uint key)

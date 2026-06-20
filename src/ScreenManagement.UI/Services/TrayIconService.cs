@@ -1,6 +1,9 @@
+using System.Drawing;
+using System.Drawing.Drawing2D;
 using System.Windows;
 using ScreenManagement.Business.Interfaces;
 using ScreenManagement.Business.Models;
+using ScreenManagement.UI.ViewModels;
 
 namespace ScreenManagement.UI.Services;
 
@@ -10,10 +13,14 @@ namespace ScreenManagement.UI.Services;
 public class TrayIconService : IDisposable
 {
     private System.Windows.Forms.NotifyIcon? _notifyIcon;
+    private Bitmap? _iconBitmap;
+    private IntPtr _iconHandle = IntPtr.Zero;
+
     private readonly IDisplayService _displayService;
     private readonly IHdrService _hdrService;
     private readonly IMonitorEnumerationService _monitorService;
     private readonly IConfigService _configService;
+    private readonly ICompositeActionService _compositeActionService;
 
     public event EventHandler? ShowWindowRequested;
     public event EventHandler? ExitRequested;
@@ -22,12 +29,14 @@ public class TrayIconService : IDisposable
         IDisplayService displayService,
         IHdrService hdrService,
         IMonitorEnumerationService monitorService,
-        IConfigService configService)
+        IConfigService configService,
+        ICompositeActionService compositeActionService)
     {
         _displayService = displayService;
         _hdrService = hdrService;
         _monitorService = monitorService;
         _configService = configService;
+        _compositeActionService = compositeActionService;
     }
 
     /// <summary>初始化托盘图标</summary>
@@ -35,7 +44,7 @@ public class TrayIconService : IDisposable
     {
         _notifyIcon = new System.Windows.Forms.NotifyIcon
         {
-            Icon = System.Drawing.SystemIcons.Application,
+            Icon = CreateMonitorIcon(Color.FromArgb(255, 37, 99, 235)),
             Text = "Screen Management",
             Visible = true,
             ContextMenuStrip = BuildContextMenu()
@@ -44,7 +53,6 @@ public class TrayIconService : IDisposable
         _notifyIcon.DoubleClick += (s, e) => ShowWindowRequested?.Invoke(this, EventArgs.Empty);
         _notifyIcon.BalloonTipClicked += (s, e) => ShowWindowRequested?.Invoke(this, EventArgs.Empty);
 
-        // 监听显示模式变化以更新图标
         _displayService.DisplayModeChanged += OnDisplayModeChanged;
     }
 
@@ -53,16 +61,16 @@ public class TrayIconService : IDisposable
     {
         var menu = new System.Windows.Forms.ContextMenuStrip();
 
-        // 显示模式子菜单
-        var modeMenu = new System.Windows.Forms.ToolStripMenuItem("显示模式");
-        modeMenu.DropDownItems.Add(CreateModeItem("仅电脑屏幕", DisplayMode.Internal));
-        modeMenu.DropDownItems.Add(CreateModeItem("复制", DisplayMode.Clone));
-        modeMenu.DropDownItems.Add(CreateModeItem("扩展", DisplayMode.Extend));
-        modeMenu.DropDownItems.Add(CreateModeItem("仅第二屏幕", DisplayMode.External));
+        // ── 显示模式子菜单 ──
+        var modeMenu = new System.Windows.Forms.ToolStripMenuItem("🖥  显示模式");
+        modeMenu.DropDownItems.Add(CreateModeItem("💻  仅电脑屏幕", DisplayMode.Internal));
+        modeMenu.DropDownItems.Add(CreateModeItem("🔄  复制", DisplayMode.Clone));
+        modeMenu.DropDownItems.Add(CreateModeItem("📺  扩展", DisplayMode.Extend));
+        modeMenu.DropDownItems.Add(CreateModeItem("🖥  仅第二屏幕", DisplayMode.External));
         menu.Items.Add(modeMenu);
 
-        // HDR 子菜单
-        var hdrMenu = new System.Windows.Forms.ToolStripMenuItem("HDR");
+        // ── HDR 子菜单 ──
+        var hdrMenu = new System.Windows.Forms.ToolStripMenuItem("✨  HDR");
         hdrMenu.DropDownOpening += async (s, e) =>
         {
             hdrMenu.DropDownItems.Clear();
@@ -70,40 +78,64 @@ public class TrayIconService : IDisposable
             foreach (var display in displays.Where(d => d.SupportsHdr))
             {
                 var item = new System.Windows.Forms.ToolStripMenuItem(
-                    $"{display.DisplayName} HDR {(display.HdrEnabled ? "✓ 开" : "○ 关")}")
-                {
-                    Tag = display.DeviceId
-                };
+                    $"{display.DisplayName}  HDR {(display.HdrEnabled ? "● 开" : "○ 关")}")
+                { Tag = display.DeviceId };
                 item.Click += async (s2, e2) =>
                 {
                     if (s2 is System.Windows.Forms.ToolStripMenuItem mi && mi.Tag is string deviceId)
-                    {
                         await _hdrService.ToggleHdrAsync(deviceId);
-                    }
                 };
                 hdrMenu.DropDownItems.Add(item);
             }
-
             if (hdrMenu.DropDownItems.Count == 0)
-            {
-                hdrMenu.DropDownItems.Add(
-                    new System.Windows.Forms.ToolStripLabel("无 HDR 显示器") { Enabled = false });
-            }
+                hdrMenu.DropDownItems.Add(new System.Windows.Forms.ToolStripLabel("无 HDR 显示器") { Enabled = false });
         };
         menu.Items.Add(hdrMenu);
 
+        // ── 快捷键动作子菜单 ──
+        var hotkeyMenu = new System.Windows.Forms.ToolStripMenuItem("⌨  快捷键动作");
+        hotkeyMenu.DropDownOpening += async (s, e) =>
+        {
+            hotkeyMenu.DropDownItems.Clear();
+            var config = await _configService.LoadAsync();
+            var bindings = config.HotkeyBindings.Where(b => b.IsEnabled).ToList();
+
+            if (bindings.Count == 0)
+            {
+                hotkeyMenu.DropDownItems.Add(new System.Windows.Forms.ToolStripLabel("未配置快捷键") { Enabled = false });
+                return;
+            }
+
+            foreach (var binding in bindings)
+            {
+                var desc = HotkeyBindingViewModel.GetActionDescription(binding);
+                var hotkey = HotkeyBindingViewModel.FormatHotkey(binding.Modifiers, binding.Key);
+                var item = new System.Windows.Forms.ToolStripMenuItem($"{desc}   [{hotkey}]")
+                { Tag = binding };
+                item.Click += async (s2, e2) =>
+                {
+                    if (s2 is System.Windows.Forms.ToolStripMenuItem mi && mi.Tag is HotkeyBinding b)
+                        await _compositeActionService.ExecuteAsync(b);
+                };
+                hotkeyMenu.DropDownItems.Add(item);
+            }
+        };
+        menu.Items.Add(hotkeyMenu);
+
         menu.Items.Add(new System.Windows.Forms.ToolStripSeparator());
 
-        // 打开主界面
+        // ── 打开主界面 ──
         var openItem = new System.Windows.Forms.ToolStripMenuItem("打开主界面");
         openItem.Click += (s, e) => ShowWindowRequested?.Invoke(this, EventArgs.Empty);
         menu.Items.Add(openItem);
 
-        // 关于
+        // ── 关于 ──
         var aboutItem = new System.Windows.Forms.ToolStripMenuItem("关于");
         aboutItem.Click += (s, e) =>
         {
-            var aboutWindow = new Views.AboutWindow
+            var app = (App)System.Windows.Application.Current;
+            var vm = app.GetRequiredService<AboutViewModel>();
+            var aboutWindow = new Views.AboutWindow(vm)
             {
                 Owner = System.Windows.Application.Current.MainWindow
             };
@@ -113,7 +145,7 @@ public class TrayIconService : IDisposable
 
         menu.Items.Add(new System.Windows.Forms.ToolStripSeparator());
 
-        // 退出
+        // ── 退出 ──
         var exitItem = new System.Windows.Forms.ToolStripMenuItem("退出");
         exitItem.Click += (s, e) => ExitRequested?.Invoke(this, EventArgs.Empty);
         menu.Items.Add(exitItem);
@@ -123,10 +155,7 @@ public class TrayIconService : IDisposable
 
     private System.Windows.Forms.ToolStripItem CreateModeItem(string text, DisplayMode mode)
     {
-        var item = new System.Windows.Forms.ToolStripMenuItem(text)
-        {
-            Tag = mode
-        };
+        var item = new System.Windows.Forms.ToolStripMenuItem(text) { Tag = mode };
         item.Click += async (s, e) =>
         {
             if (s is System.Windows.Forms.ToolStripMenuItem mi && mi.Tag is DisplayMode m)
@@ -135,59 +164,127 @@ public class TrayIconService : IDisposable
         return item;
     }
 
-    /// <summary>更新托盘图标</summary>
+    // ────────────────────────── 图标 ──────────────────────────
+
+    /// <summary>更新托盘图标（根据显示模式变色）</summary>
     public void UpdateIcon(DisplayMode mode)
     {
         if (_notifyIcon == null) return;
 
-        // 使用不同图标表示不同模式（若有资源）
-        _notifyIcon.Icon = mode switch
+        var color = mode switch
         {
-            DisplayMode.Internal => System.Drawing.SystemIcons.Application,
-            DisplayMode.Clone => System.Drawing.SystemIcons.Shield,
-            DisplayMode.Extend => System.Drawing.SystemIcons.Information,
-            DisplayMode.External => System.Drawing.SystemIcons.WinLogo,
-            _ => System.Drawing.SystemIcons.Application
+            DisplayMode.Internal  => Color.FromArgb(255, 99, 102, 241),  // 靛蓝
+            DisplayMode.Clone     => Color.FromArgb(255,  8, 145, 178),  // 青色
+            DisplayMode.Extend    => Color.FromArgb(255,  5, 150, 105),  // 绿色
+            DisplayMode.External  => Color.FromArgb(255, 124, 58,  237), // 紫色
+            _                     => Color.FromArgb(255, 37,  99,  235)  // 蓝色
         };
 
-        _notifyIcon.Text = $"Screen Management - {GetModeText(mode)}";
+        ReplaceIcon(color);
+        _notifyIcon.Text = $"Screen Management — {GetModeText(mode)}";
     }
 
-    /// <summary>更新托盘提示</summary>
     public void UpdateTooltip(string text)
     {
-        if (_notifyIcon != null)
-            _notifyIcon.Text = text;
+        if (_notifyIcon != null) _notifyIcon.Text = text;
     }
 
-    /// <summary>显示气泡通知</summary>
-    public void ShowBalloon(string title, string text, System.Windows.Forms.ToolTipIcon icon =
-        System.Windows.Forms.ToolTipIcon.Info)
+    public void ShowBalloon(string title, string text,
+        System.Windows.Forms.ToolTipIcon icon = System.Windows.Forms.ToolTipIcon.Info)
     {
         _notifyIcon?.ShowBalloonTip(3000, title, text, icon);
     }
+
+    private void ReplaceIcon(Color accentColor)
+    {
+        var oldBitmap = _iconBitmap;
+        _iconBitmap = CreateIconBitmap(accentColor);
+        _iconHandle = _iconBitmap.GetHicon();
+        _notifyIcon!.Icon = System.Drawing.Icon.FromHandle(_iconHandle);
+        oldBitmap?.Dispose();
+    }
+
+    /// <summary>生成 32×32 显示器造型图标</summary>
+    private static System.Drawing.Icon CreateMonitorIcon(Color accentColor)
+    {
+        var bmp = CreateIconBitmap(accentColor);
+        var hIcon = bmp.GetHicon();
+        return System.Drawing.Icon.FromHandle(hIcon);
+    }
+
+    private static Bitmap CreateIconBitmap(Color accentColor)
+    {
+        const int S = 32;
+        var bmp = new Bitmap(S, S, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
+        using var g = Graphics.FromImage(bmp);
+        g.SmoothingMode = SmoothingMode.AntiAlias;
+        g.Clear(Color.Transparent);
+
+        // 显示器外框（圆角矩形）
+        using var frameBrush = new SolidBrush(accentColor);
+        using var framePath = RoundedRect(new Rectangle(1, 1, 29, 21), 3);
+        g.FillPath(frameBrush, framePath);
+
+        // 屏幕区域（深色）
+        using var screenBrush = new SolidBrush(Color.FromArgb(255, 12, 20, 40));
+        g.FillRectangle(screenBrush, 4, 4, 23, 13);
+
+        // 屏幕高光（左上角光晕）
+        using var glowBrush = new SolidBrush(Color.FromArgb(55, 255, 255, 255));
+        g.FillRectangle(glowBrush, 5, 5, 21, 5);
+
+        // 屏幕内容线条（模拟内容）
+        using var lineBrush = new SolidBrush(Color.FromArgb(100, accentColor.R, accentColor.G, accentColor.B));
+        g.FillRectangle(lineBrush, 6, 12, 14, 2);
+        g.FillRectangle(lineBrush, 6, 15, 9, 1);
+
+        // 支柱
+        using var standBrush = new SolidBrush(Darken(accentColor, 0.8f));
+        g.FillRectangle(standBrush, 14, 22, 4, 4);
+
+        // 底座（圆角）
+        using var basePath = RoundedRect(new Rectangle(9, 26, 14, 4), 2);
+        g.FillPath(standBrush, basePath);
+
+        return bmp;
+    }
+
+    private static GraphicsPath RoundedRect(Rectangle b, int r)
+    {
+        int d = r * 2;
+        var path = new GraphicsPath();
+        path.AddArc(b.X, b.Y, d, d, 180, 90);
+        path.AddArc(b.Right - d, b.Y, d, d, 270, 90);
+        path.AddArc(b.Right - d, b.Bottom - d, d, d, 0, 90);
+        path.AddArc(b.X, b.Bottom - d, d, d, 90, 90);
+        path.CloseFigure();
+        return path;
+    }
+
+    private static Color Darken(Color c, float factor) =>
+        Color.FromArgb(c.A, (int)(c.R * factor), (int)(c.G * factor), (int)(c.B * factor));
+
+    // ────────────────────────────────────────────────────────
 
     public void Dispose()
     {
         _displayService.DisplayModeChanged -= OnDisplayModeChanged;
         _notifyIcon?.Dispose();
+        _iconBitmap?.Dispose();
     }
 
     private void OnDisplayModeChanged(object? sender, DisplayMode mode)
     {
-        // UI 线程安全调用
         if (System.Windows.Application.Current?.Dispatcher != null)
-        {
             System.Windows.Application.Current.Dispatcher.Invoke(() => UpdateIcon(mode));
-        }
     }
 
     private static string GetModeText(DisplayMode mode) => mode switch
     {
         DisplayMode.Internal => "仅电脑屏幕",
-        DisplayMode.Clone => "复制",
-        DisplayMode.Extend => "扩展",
+        DisplayMode.Clone    => "复制",
+        DisplayMode.Extend   => "扩展",
         DisplayMode.External => "仅第二屏幕",
-        _ => "未知"
+        _                    => "未知"
     };
 }

@@ -11,6 +11,8 @@ namespace ScreenManagement.UI;
 /// </summary>
 public partial class MainWindow : Window
 {
+    private const int WM_HOTKEY = 0x0312;
+
     private readonly IHotkeyService _hotkeyService;
     private readonly IConfigService _configService;
     private readonly IMonitorEnumerationService _monitorService;
@@ -43,20 +45,42 @@ public partial class MainWindow : Window
         _displayService.DisplayModeChanged += OnDisplayModeChanged;
     }
 
-    private async void OnLoaded(object sender, RoutedEventArgs e)
+    /// <summary>
+    /// HWND 创建后（窗口显示前）初始化热键钩子，
+    /// 由 App.xaml.cs 调用 EnsureHandle() 触发，即使窗口隐藏也能生效。
+    /// </summary>
+    protected override async void OnSourceInitialized(EventArgs e)
     {
-        if (DataContext is MainViewModel vm)
-        {
-            await vm.RefreshDisplaysCommand.ExecuteAsync(null);
-        }
+        base.OnSourceInitialized(e);
 
-        // 窗口 HWND 就绪后注册全局快捷键
         var hwnd = new WindowInteropHelper(this).Handle;
+
+        // 挂载 WM_HOTKEY 消息钩子
+        if (HwndSource.FromHwnd(hwnd) is HwndSource source)
+            source.AddHook(WndProc);
+
         _hotkeyService.Initialize(hwnd);
         _hotkeyService.HotkeyTriggered += OnHotkeyTriggered;
 
         var config = await _configService.LoadAsync();
         await _hotkeyService.RegisterAllAsync(config.HotkeyBindings, hwnd);
+    }
+
+    private async void OnLoaded(object sender, RoutedEventArgs e)
+    {
+        if (DataContext is MainViewModel vm)
+            await vm.RefreshDisplaysCommand.ExecuteAsync(null);
+    }
+
+    /// <summary>窗口消息钩子 — 将 WM_HOTKEY 转发给 HotkeyService</summary>
+    private IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
+    {
+        if (msg == WM_HOTKEY)
+        {
+            _hotkeyService.HandleHotkeyMessage(wParam.ToInt32());
+            handled = true;
+        }
+        return IntPtr.Zero;
     }
 
     private async void OnClosing(object? sender, System.ComponentModel.CancelEventArgs e)

@@ -81,7 +81,6 @@ public partial class HotkeySettingsViewModel : ObservableObject
     {
         var config = await _configService.LoadAsync();
         config.HotkeyBindings = Bindings
-            .Where(b => b.IsEnabled)
             .Select(b => b.ToModel())
             .ToList();
 
@@ -89,7 +88,6 @@ public partial class HotkeySettingsViewModel : ObservableObject
 
         // 重新注册快捷键
         _hotkeyService.UnregisterAll();
-        // 窗口句柄需要从主窗口获取
         var mainWindow = System.Windows.Application.Current.MainWindow;
         if (mainWindow != null)
         {

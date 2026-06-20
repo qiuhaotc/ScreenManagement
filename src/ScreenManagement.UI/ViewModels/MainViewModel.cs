@@ -115,7 +115,9 @@ public partial class MainViewModel : ObservableObject
     [RelayCommand]
     private void OpenHotkeySettings()
     {
-        var window = new HotkeySettingsWindow
+        var app = (App)System.Windows.Application.Current;
+        var vm = app.GetRequiredService<HotkeySettingsViewModel>();
+        var window = new HotkeySettingsWindow(vm)
         {
             Owner = System.Windows.Application.Current.MainWindow
         };
@@ -125,7 +127,9 @@ public partial class MainViewModel : ObservableObject
     [RelayCommand]
     private void OpenAbout()
     {
-        var window = new AboutWindow
+        var app = (App)System.Windows.Application.Current;
+        var vm = app.GetRequiredService<AboutViewModel>();
+        var window = new AboutWindow(vm)
         {
             Owner = System.Windows.Application.Current.MainWindow
         };

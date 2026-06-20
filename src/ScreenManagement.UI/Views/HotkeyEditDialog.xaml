@@ -4,57 +4,144 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:vm="clr-namespace:ScreenManagement.UI.ViewModels"
-        xmlns:models="clr-namespace:ScreenManagement.Business.Models;assembly=ScreenManagement.Business"
+        xmlns:converters="clr-namespace:ScreenManagement.UI.Converters"
         mc:Ignorable="d"
-        Title="{Binding Title}" Height="420" Width="400"
+        Title="{Binding Title}" Width="420"
+        SizeToContent="Height" MinHeight="380" MaxHeight="700"
         WindowStartupLocation="CenterOwner"
         ResizeMode="NoResize"
         Background="{StaticResource WindowBackgroundBrush}"
         d:DataContext="{d:DesignInstance Type=vm:HotkeyEditViewModel}">
 
-    <Grid Margin="20">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
-            <RowDefinition Height="Auto"/>
-        </Grid.RowDefinitions>
+    <Window.Resources>
+        <converters:BoolToVisibilityConverter x:Key="BoolToVis"/>
+    </Window.Resources>
 
-        <!-- 动作类型 -->
-        <StackPanel Grid.Row="0" Margin="0,0,0,12">
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel Margin="20">
+
+            <!-- ── 动作类型 ── -->
             <TextBlock Text="动作类型" FontSize="12" Margin="0,0,0,4"/>
-            <ComboBox SelectedIndex="0" Height="32">
+            <ComboBox SelectedIndex="{Binding ActionTypeIndex}" Height="32" Margin="0,0,0,14">
                 <ComboBoxItem Content="切换显示模式"/>
                 <ComboBoxItem Content="切换 HDR"/>
+                <ComboBoxItem Content="组合动作（多项同时执行）"/>
             </ComboBox>
-        </StackPanel>
 
-        <!-- 目标模式 -->
-        <StackPanel Grid.Row="1" Margin="0,0,0,12">
-            <TextBlock Text="目标模式" FontSize="12" Margin="0,0,0,4"/>
-            <ComboBox SelectedItem="{Binding TargetMode}" Height="32"
-                      ItemsSource="{Binding Source={x:Static models:DisplayMode.Extend}}">
-                <!-- 使用静态枚举值 -->
-            </ComboBox>
-        </StackPanel>
+            <!-- ── 切换显示模式：目标模式 ── -->
+            <StackPanel Visibility="{Binding IsSetDisplayMode, Converter={StaticResource BoolToVis}}"
+                        Margin="0,0,0,14">
+                <TextBlock Text="目标显示模式" FontSize="12" Margin="0,0,0,4"/>
+                <ComboBox SelectedIndex="{Binding TargetModeIndex}" Height="32">
+                    <ComboBoxItem Content="💻  仅电脑屏幕"/>
+                    <ComboBoxItem Content="🔄  复制"/>
+                    <ComboBoxItem Content="📺  扩展"/>
+                    <ComboBoxItem Content="🖥  仅第二屏幕"/>
+                </ComboBox>
+            </StackPanel>
 
-        <!-- 显示目标显示器列表（切换HDR时） -->
-        <StackPanel Grid.Row="2" Margin="0,0,0,12"
-                    Visibility="Collapsed">
-            <TextBlock Text="目标显示器" FontSize="12" Margin="0,0,0,4"/>
-            <ComboBox Height="32" ItemsSource="{Binding AvailableDisplays}"
-                      DisplayMemberPath="DisplayName"
-                      SelectedValuePath="DeviceId"
-                      SelectedValue="{Binding TargetDisplayId}"/>
-        </StackPanel>
+            <!-- ── 切换 HDR：显示器 + 操作 ── -->
+            <StackPanel Visibility="{Binding IsToggleHdr, Converter={StaticResource BoolToVis}}"
+                        Margin="0,0,0,14">
+                <TextBlock Text="目标显示器" FontSize="12" Margin="0,0,0,4"/>
+                <ComboBox Height="32" Margin="0,0,0,10"
+                          ItemsSource="{Binding AvailableDisplays}"
+                          DisplayMemberPath="DisplayName"
+                          SelectedValuePath="DeviceId"
+                          SelectedValue="{Binding TargetDisplayId}"/>
+                <TextBlock Text="HDR 操作" FontSize="12" Margin="0,0,0,4"/>
+                <ComboBox SelectedIndex="{Binding HdrModeIndex}" Height="32">
+                    <ComboBoxItem Content="切换（当前状态取反）"/>
+                    <ComboBoxItem Content="开启 HDR"/>
+                    <ComboBoxItem Content="关闭 HDR"/>
+                </ComboBox>
+            </StackPanel>
 
-        <!-- 修饰键 -->
-        <StackPanel Grid.Row="3" Margin="0,0,0,12">
+            <!-- ── 组合动作：子动作列表 ── -->
+            <StackPanel Visibility="{Binding IsCompositeAction, Converter={StaticResource BoolToVis}}"
+                        Margin="0,0,0,14">
+                <TextBlock Text="子动作列表" FontSize="12" Margin="0,0,0,6"/>
+                <Border Background="{StaticResource CardBackgroundBrush}"
+                        CornerRadius="6" Padding="8"
+                        MinHeight="56" MaxHeight="240">
+                    <ScrollViewer VerticalScrollBarVisibility="Auto">
+                        <ItemsControl ItemsSource="{Binding SubActions}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate DataType="{x:Type vm:SubActionViewModel}">
+                                    <Border Margin="0,3" Padding="8,6"
+                                            Background="{StaticResource ItemBackgroundBrush}"
+                                            CornerRadius="4">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="118"/>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="28"/>
+                                            </Grid.ColumnDefinitions>
+
+                                            <!-- 子动作类型 -->
+                                            <ComboBox Grid.Column="0"
+                                                      SelectedIndex="{Binding ActionTypeIndex}"
+                                                      Height="28" Margin="0,0,6,0" FontSize="12">
+                                                <ComboBoxItem Content="切换显示模式"/>
+                                                <ComboBoxItem Content="切换 HDR"/>
+                                            </ComboBox>
+
+                                            <!-- 目标（根据类型切换） -->
+                                            <Grid Grid.Column="1" Margin="0,0,4,0">
+                                                <!-- 切换显示模式 -->
+                                                <ComboBox SelectedIndex="{Binding TargetModeIndex}"
+                                                          Height="28" FontSize="12"
+                                                          Visibility="{Binding IsSetDisplayMode, Converter={StaticResource BoolToVis}}">
+                                                    <ComboBoxItem Content="仅电脑屏幕"/>
+                                                    <ComboBoxItem Content="复制"/>
+                                                    <ComboBoxItem Content="扩展"/>
+                                                    <ComboBoxItem Content="仅第二屏幕"/>
+                                                </ComboBox>
+
+                                                <!-- 切换 HDR -->
+                                                <StackPanel Orientation="Horizontal"
+                                                            Visibility="{Binding IsToggleHdr, Converter={StaticResource BoolToVis}}">
+                                                    <ComboBox Height="28" FontSize="12"
+                                                              MinWidth="0"
+                                                              ItemsSource="{Binding DataContext.AvailableDisplays,
+                                                                  RelativeSource={RelativeSource AncestorType=Window}}"
+                                                              DisplayMemberPath="DisplayName"
+                                                              SelectedValuePath="DeviceId"
+                                                              SelectedValue="{Binding TargetDisplayId}"
+                                                              HorizontalAlignment="Stretch"/>
+                                                    <ComboBox Height="28" FontSize="12"
+                                                              SelectedIndex="{Binding HdrModeIndex}"
+                                                              Width="58" Margin="4,0,0,0">
+                                                        <ComboBoxItem Content="切换"/>
+                                                        <ComboBoxItem Content="开"/>
+                                                        <ComboBoxItem Content="关"/>
+                                                    </ComboBox>
+                                                </StackPanel>
+                                            </Grid>
+
+                                            <!-- 删除按钮 -->
+                                            <Button Grid.Column="2"
+                                                    Content="✕" Width="28" Height="28"
+                                                    FontSize="11"
+                                                    Style="{StaticResource IconButtonStyle}"
+                                                    Command="{Binding DataContext.RemoveSubActionCommand,
+                                                        RelativeSource={RelativeSource AncestorType=Window}}"
+                                                    CommandParameter="{Binding}"/>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+                </Border>
+                <Button Content="+ 添加子动作" Height="30" Margin="0,8,0,0"
+                        Style="{StaticResource SecondaryButtonStyle}"
+                        Command="{Binding AddSubActionCommand}"/>
+            </StackPanel>
+
+            <!-- ── 修饰键 ── -->
             <TextBlock Text="修饰键" FontSize="12" Margin="0,0,0,6"/>
-            <WrapPanel>
+            <WrapPanel Margin="0,0,0,14">
                 <CheckBox Content="Ctrl" IsChecked="{Binding CtrlModifier}"
                           Margin="0,0,16,4" FontSize="13"/>
                 <CheckBox Content="Alt" IsChecked="{Binding AltModifier}"
@@ -64,27 +151,28 @@
                 <CheckBox Content="Win" IsChecked="{Binding WinModifier}"
                           FontSize="13"/>
             </WrapPanel>
-        </StackPanel>
 
-        <!-- 按键 -->
-        <StackPanel Grid.Row="4" Margin="0,0,0,12">
-            <TextBlock Text="按键" FontSize="12" Margin="0,0,0,4"/>
-            <Button Height="40" FontSize="16" FontWeight="Bold"
+            <!-- ── 按键捕获 ── -->
+            <TextBlock Text="按键（点击后按下目标键）" FontSize="12" Margin="0,0,0,4"/>
+            <Button Height="40" FontSize="15" FontWeight="Bold"
                     Content="{Binding KeyDisplay}"
                     Style="{StaticResource SecondaryButtonStyle}"
-                    Command="{Binding StartKeyCaptureCommand}"/>
+                    Command="{Binding StartKeyCaptureCommand}"
+                    Margin="0,0,0,4"/>
             <TextBlock Text="{Binding ConflictMessage}" FontSize="11"
-                       Foreground="Orange" Margin="0,4,0,0"/>
-        </StackPanel>
+                       Foreground="Orange" Margin="0,0,0,0"
+                       Visibility="{Binding ConflictMessage, Converter={StaticResource BoolToVis}}"/>
 
-        <!-- 底部操作 -->
-        <StackPanel Grid.Row="6" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,12,0,0">
-            <Button Content="确定" Width="80" Height="32"
-                    Style="{StaticResource PrimaryButtonStyle}"
-                    Command="{Binding ConfirmCommand}" Margin="0,0,8,0"/>
-            <Button Content="取消" Width="80" Height="32"
-                    Style="{StaticResource SecondaryButtonStyle}"
-                    Command="{Binding CancelCommand}"/>
+            <!-- ── 底部操作 ── -->
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,16,0,0">
+                <Button Content="确定" Width="80" Height="32"
+                        Style="{StaticResource PrimaryButtonStyle}"
+                        Command="{Binding ConfirmCommand}" Margin="0,0,8,0"/>
+                <Button Content="取消" Width="80" Height="32"
+                        Style="{StaticResource SecondaryButtonStyle}"
+                        Command="{Binding CancelCommand}"/>
+            </StackPanel>
+
         </StackPanel>
-    </Grid>
+    </ScrollViewer>
 </Window>
