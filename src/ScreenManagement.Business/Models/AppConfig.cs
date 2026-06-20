@@ -20,6 +20,9 @@ public class AppConfig
     /// <summary>界面语言</summary>
     public string Language { get; set; } = "zh-CN";
 
+    /// <summary>快捷键触发时，若当前已是目标状态则恢复之前状态（默认开启）</summary>
+    public bool EnableStateRestore { get; set; } = true;
+
     /// <summary>创建默认配置</summary>
     public static AppConfig CreateDefault()
     {

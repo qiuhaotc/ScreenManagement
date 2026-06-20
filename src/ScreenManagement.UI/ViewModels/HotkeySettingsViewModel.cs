@@ -17,6 +17,7 @@ public partial class HotkeySettingsViewModel : ObservableObject
 
     [ObservableProperty] private string _conflictStatus = string.Empty;
     [ObservableProperty] private bool _hasConflicts;
+    [ObservableProperty] private bool _enableStateRestore = true;
 
     private readonly IHotkeyService _hotkeyService;
     private readonly IConfigService _configService;
@@ -83,6 +84,7 @@ public partial class HotkeySettingsViewModel : ObservableObject
         config.HotkeyBindings = Bindings
             .Select(b => b.ToModel())
             .ToList();
+        config.EnableStateRestore = EnableStateRestore;
 
         await _configService.SaveAsync(config);
 
@@ -105,6 +107,7 @@ public partial class HotkeySettingsViewModel : ObservableObject
         Bindings = new ObservableCollection<HotkeyBindingViewModel>(
             config.HotkeyBindings.Select(HotkeyBindingViewModel.FromModel));
 
+        EnableStateRestore = config.EnableStateRestore;
         ConflictStatus = "✅ 所有快捷键可用";
     }
 

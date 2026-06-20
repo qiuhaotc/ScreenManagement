@@ -162,12 +162,26 @@
         </Border>
 
         <!-- ===== 底部导航 ===== -->
-        <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right">
-            <Button Content="⚙ 快捷键设置" Style="{StaticResource LinkButtonStyle}"
-                    Margin="0,0,16,0"
-                    Command="{Binding OpenHotkeySettingsCommand}"/>
-            <Button Content="ℹ 关于" Style="{StaticResource LinkButtonStyle}"
-                    Command="{Binding OpenAboutCommand}"/>
-        </StackPanel>
+        <Grid Grid.Row="3">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- 开机自启 -->
+            <CheckBox Grid.Column="0" VerticalAlignment="Center"
+                      IsChecked="{Binding AutoStartEnabled}"
+                      Content="开机自动启动"
+                      FontSize="13"/>
+
+            <!-- 链接按钮 -->
+            <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right">
+                <Button Content="⚙ 快捷键设置" Style="{StaticResource LinkButtonStyle}"
+                        Margin="0,0,16,0"
+                        Command="{Binding OpenHotkeySettingsCommand}"/>
+                <Button Content="ℹ 关于" Style="{StaticResource LinkButtonStyle}"
+                        Command="{Binding OpenAboutCommand}"/>
+            </StackPanel>
+        </Grid>
     </Grid>
 </Window>

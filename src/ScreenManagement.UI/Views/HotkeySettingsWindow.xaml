@@ -16,6 +16,7 @@
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
         <!-- 标题 -->
@@ -78,12 +79,26 @@
 
         <!-- 添加按钮 -->
         <Button Grid.Row="2" Content="+ 添加快捷键" Height="36"
-                Margin="0,0,0,16"
+                Margin="0,0,0,12"
                 Style="{StaticResource SecondaryButtonStyle}"
                 Command="{Binding AddBindingCommand}"/>
 
+        <!-- 状态恢复选项 -->
+        <Border Grid.Row="3" Margin="0,0,0,12"
+                Background="{StaticResource CardBackgroundBrush}"
+                CornerRadius="8" Padding="16,12">
+            <StackPanel>
+                <CheckBox IsChecked="{Binding EnableStateRestore}"
+                          FontSize="13" FontWeight="SemiBold"
+                          Content="启用状态恢复（再次按同一快捷键时恢复之前的状态）"/>
+                <TextBlock Text="开启后：若当前已是快捷键的目标状态，再次按下该快捷键将恢复到切换前的状态。"
+                           FontSize="11" Foreground="{StaticResource SecondaryTextBrush}"
+                           Margin="22,4,0,0" TextWrapping="Wrap"/>
+            </StackPanel>
+        </Border>
+
         <!-- 底部操作 -->
-        <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right">
+        <StackPanel Grid.Row="4" Orientation="Horizontal" HorizontalAlignment="Right">
             <Button Content="保存" Width="80" Height="32"
                     Style="{StaticResource PrimaryButtonStyle}"
                     Command="{Binding SaveCommand}" Margin="0,0,8,0"/>

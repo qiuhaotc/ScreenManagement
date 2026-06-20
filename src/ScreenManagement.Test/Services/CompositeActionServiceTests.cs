@@ -12,6 +12,7 @@ public class CompositeActionServiceTests
 {
     private readonly Mock<IDisplayService> _mockDisplayService;
     private readonly Mock<IHdrService> _mockHdrService;
+    private readonly Mock<IConfigService> _mockConfigService;
     private readonly Mock<ILogger<CompositeActionService>> _mockLogger;
     private readonly CompositeActionService _service;
 
@@ -19,19 +20,28 @@ public class CompositeActionServiceTests
     {
         _mockDisplayService = new Mock<IDisplayService>();
         _mockHdrService = new Mock<IHdrService>();
+        _mockConfigService = new Mock<IConfigService>();
         _mockLogger = new Mock<ILogger<CompositeActionService>>();
 
         _mockDisplayService
             .Setup(s => s.SetDisplayModeAsync(It.IsAny<DisplayMode>()))
             .ReturnsAsync(true);
+        _mockDisplayService
+            .Setup(s => s.GetCurrentMode())
+            .Returns(DisplayMode.Internal);
 
         _mockHdrService
             .Setup(s => s.ToggleHdrAsync(It.IsAny<string>()))
             .ReturnsAsync(true);
 
+        _mockConfigService
+            .Setup(s => s.LoadAsync())
+            .ReturnsAsync(new AppConfig { EnableStateRestore = false });
+
         _service = new CompositeActionService(
             _mockDisplayService.Object,
             _mockHdrService.Object,
+            _mockConfigService.Object,
             _mockLogger.Object);
     }
 

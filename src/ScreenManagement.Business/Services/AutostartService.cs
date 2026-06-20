@@ -8,7 +8,7 @@ namespace ScreenManagement.Business.Services;
 public class AutostartService : IAutostartService
 {
     private const string RunKey = @"Software\Microsoft\Windows\CurrentVersion\Run";
-    private const string AppName = "ScreenManagement";
+    private const string AppName = "qiuhaotc.ScreenManagement";
 
     private readonly ILogger<AutostartService> _logger;
 

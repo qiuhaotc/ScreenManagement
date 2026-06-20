@@ -16,27 +16,47 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty] private ObservableCollection<DisplayInfo> _displays = new();
     [ObservableProperty] private string _statusMessage = string.Empty;
     [ObservableProperty] private bool _isLoading;
+    [ObservableProperty] private bool _autoStartEnabled;
 
     private readonly IDisplayService _displayService;
     private readonly IHdrService _hdrService;
     private readonly IMonitorEnumerationService _monitorService;
     private readonly IConfigService _configService;
     private readonly IHotkeyService _hotkeyService;
+    private readonly IAutostartService _autostartService;
 
     public MainViewModel(
         IDisplayService displayService,
         IHdrService hdrService,
         IMonitorEnumerationService monitorService,
         IConfigService configService,
-        IHotkeyService hotkeyService)
+        IHotkeyService hotkeyService,
+        IAutostartService autostartService)
     {
         _displayService = displayService;
         _hdrService = hdrService;
         _monitorService = monitorService;
         _configService = configService;
         _hotkeyService = hotkeyService;
+        _autostartService = autostartService;
 
         _displayService.DisplayModeChanged += OnDisplayModeChanged;
+
+        // 从注册表读取开机自启状态
+        _autoStartEnabled = _autostartService.IsAutostartEnabled();
+    }
+
+    partial void OnAutoStartEnabledChanged(bool value)
+    {
+        _autostartService.SetAutostart(value);
+        _ = SaveAutoStartToConfigAsync(value);
+    }
+
+    private async Task SaveAutoStartToConfigAsync(bool value)
+    {
+        var config = await _configService.LoadAsync();
+        config.AutoStart = value;
+        await _configService.SaveAsync(config);
     }
 
     [RelayCommand]
