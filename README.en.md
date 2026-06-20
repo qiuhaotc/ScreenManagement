@@ -21,6 +21,11 @@
 
 Download the latest version from [Releases](https://github.com/qiuhaotc/ScreenManagement/releases).
 
+| File | Description |
+|------|-------------|
+| `ScreenManagement-vX.Y.Z-win-x64-full.zip` | Self-contained, no .NET Runtime required, larger size |
+| `ScreenManagement-vX.Y.Z-win-x64.zip` | Framework-dependent, smaller size, requires [.NET 10 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/10.0) |
+
 ## ⌨ Default Hotkeys
 
 | Shortcut | Action |
@@ -36,7 +41,8 @@ Hotkeys can be customized in the settings page.
 ### Prerequisites
 
 - .NET 10 SDK
-- MAUI workload: `dotnet workload install maui-windows`
+- Windows 10/11
+- Visual Studio 2026+ or VS Code with C# extension
 
 ### Build
 
@@ -44,8 +50,14 @@ Hotkeys can be customized in the settings page.
 dotnet restore
 dotnet build
 dotnet run --project src/ScreenManagement.UI
-dotnet test
+dotnet test src/ScreenManagement.Test/ScreenManagement.Test.csproj
+dotnet publish src/ScreenManagement.UI/ScreenManagement.UI.csproj --configuration Release --runtime win-x64 --self-contained true -p:PublishSingleFile=true -p:EnableCompressionInSingleFile=true
 ```
+
+### CI/CD
+
+- Pushes to `main` and pull requests targeting `main` run build and unit tests automatically.
+- Pushing a `v*` tag (for example, `v1.0` or `v0.0.1`) triggers test, publish, and GitHub Release creation automatically.
 
 ## 📄 License
 

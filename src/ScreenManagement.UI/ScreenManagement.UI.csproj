@@ -8,7 +8,7 @@
     <UseWPF>true</UseWPF>
     <UseWindowsForms>true</UseWindowsForms>
     <RootNamespace>ScreenManagement.UI</RootNamespace>
-    <AssemblyName>ScreenManagement.UI</AssemblyName>
+    <AssemblyName>ScreenManagement</AssemblyName>
     <ApplicationIcon>app.ico</ApplicationIcon>
     <AssemblyTitle>屏幕管理|Screen Management</AssemblyTitle>
   </PropertyGroup>

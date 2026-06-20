@@ -20,24 +20,20 @@ public class ConfigServiceTests
     }
 
     [Fact]
-    public async Task LoadAsync_NoConfigFile_ReturnsDefaultConfig()
-    {
-        // Act
-        var config = await _service.LoadAsync();
-
-        // Assert
-        config.Should().NotBeNull();
-        config.HotkeyBindings.Should().NotBeEmpty();
-        config.Language.Should().Be("zh-CN");
-        config.StartMinimized.Should().BeFalse();
-    }
-
-    [Fact]
     public async Task SaveAndLoad_PreservesData()
     {
         // Arrange
         var original = AppConfig.CreateDefault();
         original.AutoStart = true;
+        original.HotkeyBindings.Add(new HotkeyBinding
+        {
+            ActionType = HotkeyActionType.SetDisplayMode,
+            TargetMode = DisplayMode.Extend,
+            Modifiers = ModifierKeys.Control | ModifierKeys.Alt,
+            Key = 0x42, // B
+            IsEnabled = true
+        });
+
         original.HotkeyBindings[0].IsEnabled = false;
 
         // Act

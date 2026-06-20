@@ -23,9 +23,10 @@
 
 从 [Releases](https://github.com/qiuhaotc/ScreenManagement/releases) 页面下载最新版本：
 
-- `ScreenManagement.UI.exe` — 单文件自包含版本（无需安装 .NET Runtime）
-
-或使用框架依赖版本（体积更小，需安装 [.NET 10 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/10.0)）。
+| 文件 | 说明 |
+|------|------|
+| `ScreenManagement-vX.Y.Z-win-x64-full.zip` | 自包含版，无需安装 .NET Runtime，体积较大 |
+| `ScreenManagement-vX.Y.Z-win-x64.zip` | 框架依赖版，体积小，需安装 [.NET 10 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/10.0) |
 
 ## ⌨ 默认快捷键
 
@@ -42,8 +43,8 @@
 ### 环境要求
 
 - .NET 10 SDK
-- MAUI 工作负载: `dotnet workload install maui-windows`
-- Visual Studio 2026+ 或 VS Code
+- Windows 10/11（开发与运行）
+- Visual Studio 2026+ 或 VS Code（安装 C# 扩展）
 
 ### 构建
 
@@ -58,11 +59,16 @@ dotnet build
 dotnet run --project src/ScreenManagement.UI
 
 # 测试
-dotnet test
+dotnet test src/ScreenManagement.Test/ScreenManagement.Test.csproj
 
 # 发布单文件
-dotnet publish src/ScreenManagement.UI --configuration Release --runtime win-x64 --self-contained true -p:PublishSingleFile=true
+dotnet publish src/ScreenManagement.UI/ScreenManagement.UI.csproj --configuration Release --runtime win-x64 --self-contained true -p:PublishSingleFile=true -p:EnableCompressionInSingleFile=true
 ```
+
+### CI/CD
+
+- Push 到 `main` 或向 `main` 提交 PR 时，自动执行构建和单元测试
+- Push `v*` 标签（如 `v1.0`、`v0.0.1`）时，自动测试、发布并创建 GitHub Release
 
 ### 项目结构
 
@@ -70,7 +76,7 @@ dotnet publish src/ScreenManagement.UI --configuration Release --runtime win-x64
 ScreenManagement/
 ├── src/
 │   ├── ScreenManagement.Business/   # 业务逻辑层
-│   ├── ScreenManagement.UI/         # MAUI 界面层
+│   ├── ScreenManagement.UI/         # WPF 界面层
 │   └── ScreenManagement.Test/       # 测试层
 ├── .github/workflows/               # CI/CD
 ├── docs/                            # 设计文档
