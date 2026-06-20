@@ -72,48 +72,33 @@ public class DisplayService : IDisplayService
         {
             try
             {
-                uint pathCount = 0, modeCount = 0;
-                int error = NativeMethods.GetDisplayConfigBufferSizes(
-                    NativeTypes.QDC_DATABASE_CURRENT,
-                    out pathCount, out modeCount);
-
-                if (error != NativeTypes.ERROR_SUCCESS)
+                uint topologyFlag;
+                switch (mode)
                 {
-                    _logger.LogError("GetDisplayConfigBufferSizes failed: {Error}", error);
-                    return false;
+                    case DisplayMode.Internal:
+                        topologyFlag = NativeTypes.SDC_TOPOLOGY_INTERNAL;
+                        break;
+                    case DisplayMode.Clone:
+                        topologyFlag = NativeTypes.SDC_TOPOLOGY_CLONE;
+                        break;
+                    case DisplayMode.Extend:
+                        topologyFlag = NativeTypes.SDC_TOPOLOGY_EXTEND;
+                        break;
+                    case DisplayMode.External:
+                        topologyFlag = NativeTypes.SDC_TOPOLOGY_EXTERNAL;
+                        break;
+                    default:
+                        _logger.LogWarning("Invalid display mode: {Mode}", mode);
+                        return false;
                 }
 
-                var paths = new DISPLAYCONFIG_PATH_INFO[pathCount];
-                var modes = new DISPLAYCONFIG_MODE_INFO[modeCount];
+                // 切换拓扑时使用预定义拓扑标志 + SDC_APPLY，路径/模式数组传 NULL。
+                // 不能与 SDC_USE_SUPPLIED_DISPLAY_CONFIG 组合使用。
+                uint flags = NativeTypes.SDC_APPLY | topologyFlag;
 
-                error = NativeMethods.QueryDisplayConfig(
-                    NativeTypes.QDC_DATABASE_CURRENT,
-                    ref pathCount, paths,
-                    ref modeCount, modes,
-                    out uint _);
-
-                if (error != NativeTypes.ERROR_SUCCESS)
-                {
-                    _logger.LogError("QueryDisplayConfig failed: {Error}", error);
-                    return false;
-                }
-
-                uint topologyFlag = mode switch
-                {
-                    DisplayMode.Internal => NativeTypes.SDC_TOPOLOGY_INTERNAL,
-                    DisplayMode.Clone => NativeTypes.SDC_TOPOLOGY_CLONE,
-                    DisplayMode.Extend => NativeTypes.SDC_TOPOLOGY_EXTEND,
-                    DisplayMode.External => NativeTypes.SDC_TOPOLOGY_EXTERNAL,
-                    _ => NativeTypes.SDC_TOPOLOGY_EXTEND
-                };
-
-                uint flags = NativeTypes.SDC_APPLY
-                           | NativeTypes.SDC_USE_SUPPLIED_DISPLAY_CONFIG
-                           | topologyFlag;
-
-                error = NativeMethods.SetDisplayConfig(
-                    pathCount, paths,
-                    modeCount, modes,
+                int error = NativeMethods.SetDisplayConfig(
+                    0, null,
+                    0, null,
                     flags);
 
                 if (error != NativeTypes.ERROR_SUCCESS)

@@ -66,11 +66,36 @@ public static class NativeTypes
     public const int ERROR_SUCCESS = 0;
     public const int ERROR_HOTKEY_ALREADY_REGISTERED = 1409;
     public const int ERROR_HOTKEY_NOT_REGISTERED = 1419;
+
+    // ──────────────────────────────────────────────
+    // 输出技术类型（用于判断内置/外接显示器）
+    // ──────────────────────────────────────────────
+    public const uint DISPLAYCONFIG_OUTPUT_TECHNOLOGY_INTERNAL = 0x80000000;
+    public const uint DISPLAYCONFIG_OUTPUT_TECHNOLOGY_DISPLAYPORT_EMBEDDED = 0x80000004;
+    public const uint DISPLAYCONFIG_OUTPUT_TECHNOLOGY_UDI_EMBEDDED = 0x8000000A;
+
+    // 无效的模式索引
+    public const uint DISPLAYCONFIG_PATH_MODE_IDX_INVALID = 0xFFFFFFFF;
 }
 
 // ──────────────────────────────────────────────
 // 结构体定义
 // ──────────────────────────────────────────────
+
+[StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+public struct DISPLAYCONFIG_TARGET_DEVICE_NAME
+{
+    public DISPLAYCONFIG_DEVICE_INFO_HEADER header;
+    public uint flags;
+    public uint outputTechnology;
+    public ushort edidManufactureId;
+    public ushort edidProductCodeId;
+    public uint connectorInstance;
+    [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 64)]
+    public string monitorFriendlyDeviceName;
+    [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 128)]
+    public string monitorDevicePath;
+}
 
 [StructLayout(LayoutKind.Sequential)]
 public struct DISPLAYCONFIG_PATH_INFO
@@ -80,19 +105,19 @@ public struct DISPLAYCONFIG_PATH_INFO
     public uint flags;
 }
 
-[StructLayout(LayoutKind.Sequential)]
+[StructLayout(LayoutKind.Sequential, Pack = 4)]
 public struct DISPLAYCONFIG_PATH_SOURCE_INFO
 {
-    public long adapterId;
+    public long adapterId; // LUID, Pack=4
     public uint id;
     public uint modeInfoIdx;
     public uint statusFlags;
 }
 
-[StructLayout(LayoutKind.Sequential)]
+[StructLayout(LayoutKind.Sequential, Pack = 4)]
 public struct DISPLAYCONFIG_PATH_TARGET_INFO
 {
-    public long adapterId;
+    public long adapterId; // LUID, Pack=4
     public uint id;
     public uint modeInfoIdx;
     public uint outputTechnology;
@@ -100,6 +125,7 @@ public struct DISPLAYCONFIG_PATH_TARGET_INFO
     public uint scaling;
     public DISPLAYCONFIG_RATIONAL refreshRate;
     public uint scanLineOrdering;
+    [System.Runtime.InteropServices.MarshalAs(System.Runtime.InteropServices.UnmanagedType.Bool)]
     public bool targetAvailable;
     public uint statusFlags;
 }
@@ -111,12 +137,12 @@ public struct DISPLAYCONFIG_RATIONAL
     public uint Denominator;
 }
 
-[StructLayout(LayoutKind.Sequential)]
+[StructLayout(LayoutKind.Sequential, Pack = 4)]
 public struct DISPLAYCONFIG_MODE_INFO
 {
     public uint infoType;
     public uint id;
-    public long adapterId;
+    public long adapterId; // LUID, Pack=4
     public DISPLAYCONFIG_MODE_INFO_UNION info;
 }
 
@@ -168,12 +194,14 @@ public struct POINTL
     public int y;
 }
 
-[StructLayout(LayoutKind.Sequential)]
+// adapterId 是 Windows LUID，底层为 2×4 字节字段（对齐=4）。
+// C# long 对齐=8，必须用 Pack=4 追使尺寸与 Windows 结构体匹配。
+[StructLayout(LayoutKind.Sequential, Pack = 4)]
 public struct DISPLAYCONFIG_DEVICE_INFO_HEADER
 {
     public uint type;
     public uint size;
-    public long adapterId;
+    public long adapterId; // LUID：LowPart(u32) + HighPart(i32)→共 8 字节，Pack=4 后对齐=4
     public uint id;
 }
 
@@ -181,13 +209,19 @@ public struct DISPLAYCONFIG_DEVICE_INFO_HEADER
 public struct DISPLAYCONFIG_GET_ADVANCED_COLOR_INFO
 {
     public DISPLAYCONFIG_DEVICE_INFO_HEADER header;
+    // 位域打包在 value 中:
+    //   bit0 advancedColorSupported
+    //   bit1 advancedColorEnabled
+    //   bit2 wideColorEnforced
+    //   bit3 advancedColorForceDisabled
     public uint value;
     public uint colorEncoding;
     public uint bitsPerColorChannel;
-    public uint advancedColorSupported;
-    public uint advancedColorEnabled;
-    public uint wideColorEnforced;
-    public uint advancedColorForceDisabled;
+
+    public readonly bool AdvancedColorSupported => (value & 0x1) != 0;
+    public readonly bool AdvancedColorEnabled => (value & 0x2) != 0;
+    public readonly bool WideColorEnforced => (value & 0x4) != 0;
+    public readonly bool AdvancedColorForceDisabled => (value & 0x8) != 0;
 }
 
 [StructLayout(LayoutKind.Sequential)]

@@ -22,7 +22,7 @@ public class HdrService : IHdrService
         {
             try
             {
-                if (!TryParseDisplayId(displayId, out long adapterId, out uint sourceId))
+                if (!TryParseDisplayId(displayId, out long adapterId, out uint targetId))
                     return false;
 
                 var request = new DISPLAYCONFIG_GET_ADVANCED_COLOR_INFO
@@ -32,18 +32,18 @@ public class HdrService : IHdrService
                         type = NativeTypes.DISPLAYCONFIG_DEVICE_INFO_GET_ADVANCED_COLOR_INFO,
                         size = (uint)System.Runtime.InteropServices.Marshal.SizeOf<DISPLAYCONFIG_GET_ADVANCED_COLOR_INFO>(),
                         adapterId = adapterId,
-                        id = sourceId
+                        id = targetId
                     }
                 };
 
-                int error = NativeMethods.DisplayConfigGetDeviceInfo(ref request.header);
+                int error = NativeMethods.DisplayConfigGetDeviceInfo(ref request);
                 if (error != NativeTypes.ERROR_SUCCESS)
                 {
                     _logger.LogWarning("DisplayConfigGetDeviceInfo for HDR status failed: {Error}", error);
                     return false;
                 }
 
-                return request.advancedColorEnabled != 0;
+                return request.AdvancedColorEnabled;
             }
             catch (Exception ex)
             {
@@ -60,7 +60,7 @@ public class HdrService : IHdrService
         {
             try
             {
-                if (!TryParseDisplayId(displayId, out long adapterId, out uint sourceId))
+                if (!TryParseDisplayId(displayId, out long adapterId, out uint targetId))
                     return false;
 
                 var request = new DISPLAYCONFIG_SET_ADVANCED_COLOR_STATE
@@ -70,14 +70,14 @@ public class HdrService : IHdrService
                         type = NativeTypes.DISPLAYCONFIG_DEVICE_INFO_SET_ADVANCED_COLOR_STATE,
                         size = (uint)System.Runtime.InteropServices.Marshal.SizeOf<DISPLAYCONFIG_SET_ADVANCED_COLOR_STATE>(),
                         adapterId = adapterId,
-                        id = sourceId
+                        id = targetId
                     },
                     state = enable
                         ? NativeTypes.DISPLAYCONFIG_ADVANCED_COLOR_ENABLED
                         : NativeTypes.DISPLAYCONFIG_ADVANCED_COLOR_DISABLED
                 };
 
-                int error = NativeMethods.DisplayConfigSetDeviceInfo(ref request.header);
+                int error = NativeMethods.DisplayConfigSetDeviceInfo(ref request);
                 if (error != NativeTypes.ERROR_SUCCESS)
                 {
                     _logger.LogError("DisplayConfigSetDeviceInfo for HDR failed: {Error}", error);
@@ -107,7 +107,7 @@ public class HdrService : IHdrService
     {
         try
         {
-            if (!TryParseDisplayId(displayId, out long adapterId, out uint sourceId))
+            if (!TryParseDisplayId(displayId, out long adapterId, out uint targetId))
                 return false;
 
             var request = new DISPLAYCONFIG_GET_ADVANCED_COLOR_INFO
@@ -117,12 +117,12 @@ public class HdrService : IHdrService
                     type = NativeTypes.DISPLAYCONFIG_DEVICE_INFO_GET_ADVANCED_COLOR_INFO,
                     size = (uint)System.Runtime.InteropServices.Marshal.SizeOf<DISPLAYCONFIG_GET_ADVANCED_COLOR_INFO>(),
                     adapterId = adapterId,
-                    id = sourceId
+                    id = targetId
                 }
             };
 
-            int error = NativeMethods.DisplayConfigGetDeviceInfo(ref request.header);
-            return error == NativeTypes.ERROR_SUCCESS && request.advancedColorSupported != 0;
+            int error = NativeMethods.DisplayConfigGetDeviceInfo(ref request);
+            return error == NativeTypes.ERROR_SUCCESS && request.AdvancedColorSupported;
         }
         catch (Exception ex)
         {
@@ -131,21 +131,21 @@ public class HdrService : IHdrService
         }
     }
 
-    /// <summary>从 displayId 字符串解析出 adapterId 和 sourceId</summary>
-    private static bool TryParseDisplayId(string displayId, out long adapterId, out uint sourceId)
+    /// <summary>从 displayId 字符串解析出 adapterId 和 targetId</summary>
+    private static bool TryParseDisplayId(string displayId, out long adapterId, out uint targetId)
     {
         adapterId = 0;
-        sourceId = 0;
+        targetId = 0;
 
         if (string.IsNullOrEmpty(displayId))
             return false;
 
-        // displayId 格式: "LUID:SourceId" 例如 "12345:0"
+        // displayId 格式: "LUID:TargetId" 例如 "12345:0"
         var parts = displayId.Split(':');
         if (parts.Length != 2)
             return false;
 
         return long.TryParse(parts[0], out adapterId)
-            && uint.TryParse(parts[1], out sourceId);
+            && uint.TryParse(parts[1], out targetId);
     }
 }

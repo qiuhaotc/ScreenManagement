@@ -20,7 +20,7 @@ public static class NativeMethods
         out uint numPathArrayElements,
         out uint numModeInfoArrayElements);
 
-    /// <summary>查询当前显示配置</summary>
+    /// <summary>查询当前显示配置（含拓扑 ID，用于 QDC_DATABASE_CURRENT）</summary>
     [DllImport(User32, SetLastError = true)]
     public static extern int QueryDisplayConfig(
         uint flags,
@@ -29,6 +29,16 @@ public static class NativeMethods
         ref uint numModeInfoArrayElements,
         [In, Out] DISPLAYCONFIG_MODE_INFO[] modeInfoArray,
         out uint currentTopologyId);
+
+    /// <summary>查询当前显示配置（拓扑 ID 传 IntPtr.Zero，用于 QDC_ONLY_ACTIVE_PATHS）</summary>
+    [DllImport(User32, SetLastError = true)]
+    public static extern int QueryDisplayConfig(
+        uint flags,
+        ref uint numPathArrayElements,
+        [In, Out] DISPLAYCONFIG_PATH_INFO[] pathArray,
+        ref uint numModeInfoArrayElements,
+        [In, Out] DISPLAYCONFIG_MODE_INFO[] modeInfoArray,
+        IntPtr currentTopologyId);
 
     /// <summary>设置显示配置</summary>
     [DllImport(User32, SetLastError = true)]
@@ -44,10 +54,25 @@ public static class NativeMethods
     public static extern int DisplayConfigGetDeviceInfo(
         ref DISPLAYCONFIG_DEVICE_INFO_HEADER requestPacket);
 
+    /// <summary>获取目标显示器名称信息</summary>
+    [DllImport(User32, SetLastError = true)]
+    public static extern int DisplayConfigGetDeviceInfo(
+        ref DISPLAYCONFIG_TARGET_DEVICE_NAME requestPacket);
+
+    /// <summary>获取高级颜色（HDR）信息</summary>
+    [DllImport(User32, SetLastError = true)]
+    public static extern int DisplayConfigGetDeviceInfo(
+        ref DISPLAYCONFIG_GET_ADVANCED_COLOR_INFO requestPacket);
+
     /// <summary>设置显示设备信息</summary>
     [DllImport(User32, SetLastError = true)]
     public static extern int DisplayConfigSetDeviceInfo(
         ref DISPLAYCONFIG_DEVICE_INFO_HEADER requestPacket);
+
+    /// <summary>设置高级颜色（HDR）状态</summary>
+    [DllImport(User32, SetLastError = true)]
+    public static extern int DisplayConfigSetDeviceInfo(
+        ref DISPLAYCONFIG_SET_ADVANCED_COLOR_STATE requestPacket);
 
     // ══════════════════════════════════════════════
     // 全局快捷键 API
