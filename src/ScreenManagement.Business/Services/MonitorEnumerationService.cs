@@ -101,14 +101,17 @@ public class MonitorEnumerationService : IMonitorEnumerationService
         {
             var path = paths[i];
 
-            // 唯一标识：adapterId(LUID) + targetId
-            string deviceId = $"{path.targetInfo.adapterId}:{path.targetInfo.id}";
+            // 先获取设备名称，以便使用稳定的 monitorDevicePath 作为唯一标识
+            var (friendlyName, outputTechnology, monitorDevicePath, success) =
+                GetTargetDeviceName(path.targetInfo.adapterId, path.targetInfo.id);
+
+            // 优先使用 monitorDevicePath（跨重启稳定），回退到 adapterId:targetId（LUID，重启后会变）
+            string deviceId = !string.IsNullOrEmpty(monitorDevicePath)
+                ? monitorDevicePath
+                : $"{path.targetInfo.adapterId}:{path.targetInfo.id}";
+
             if (!seenTargets.Add(deviceId))
                 continue;
-
-            // 获取显示器友好名称与输出技术
-            var (friendlyName, outputTechnology, success) =
-                GetTargetDeviceName(path.targetInfo.adapterId, path.targetInfo.id);
 
             bool isInternal =
                 outputTechnology == NativeTypes.DISPLAYCONFIG_OUTPUT_TECHNOLOGY_INTERNAL ||
@@ -174,8 +177,8 @@ public class MonitorEnumerationService : IMonitorEnumerationService
         }
     }
 
-    /// <summary>获取目标显示器的友好名称和输出技术</summary>
-    private (string friendlyName, uint outputTechnology, bool success) GetTargetDeviceName(
+    /// <summary>获取目标显示器的友好名称、输出技术和稳定设备路径</summary>
+    private (string friendlyName, uint outputTechnology, string monitorDevicePath, bool success) GetTargetDeviceName(
         long adapterId, uint targetId)
     {
         try
@@ -195,15 +198,15 @@ public class MonitorEnumerationService : IMonitorEnumerationService
             if (error != NativeTypes.ERROR_SUCCESS)
             {
                 _logger.LogDebug("DisplayConfigGetDeviceInfo (target name) failed: {Error}", error);
-                return (string.Empty, 0, false);
+                return (string.Empty, 0, string.Empty, false);
             }
 
-            return (request.monitorFriendlyDeviceName, request.outputTechnology, true);
+            return (request.monitorFriendlyDeviceName, request.outputTechnology, request.monitorDevicePath, true);
         }
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "GetTargetDeviceName failed for target {TargetId}", targetId);
-            return (string.Empty, 0, false);
+            return (string.Empty, 0, string.Empty, false);
         }
     }
 }

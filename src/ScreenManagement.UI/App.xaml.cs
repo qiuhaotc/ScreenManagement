@@ -121,8 +121,10 @@ public partial class App : System.Windows.Application
         var handle = NativeHelper.FindWindow(null, "Screen Management");
         if (handle != IntPtr.Zero)
         {
+            // 发送自定义消息让第一个实例通过 WPF 渲染管线恢复窗口，
+            // 避免直接调用 ShowWindow 造成黑屏
+            NativeHelper.SendMessage(handle, UI.MainWindow.WM_ACTIVATE_INSTANCE, IntPtr.Zero, IntPtr.Zero);
             NativeHelper.SetForegroundWindow(handle);
-            NativeHelper.ShowWindow(handle, 9); // SW_RESTORE
         }
     }
 }
@@ -138,4 +140,7 @@ internal static class NativeHelper
 
     [System.Runtime.InteropServices.DllImport("user32.dll")]
     public static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
+
+    [System.Runtime.InteropServices.DllImport("user32.dll")]
+    public static extern IntPtr SendMessage(IntPtr hWnd, int Msg, IntPtr wParam, IntPtr lParam);
 }

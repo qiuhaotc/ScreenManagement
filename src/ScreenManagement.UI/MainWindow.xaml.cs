@@ -13,6 +13,9 @@ public partial class MainWindow : Window
 {
     private const int WM_HOTKEY = 0x0312;
 
+    /// <summary>第二个实例通知第一个实例激活自身的自定义消息（WM_APP+1）</summary>
+    internal const int WM_ACTIVATE_INSTANCE = 0x8001;
+
     private readonly IHotkeyService _hotkeyService;
     private readonly IConfigService _configService;
     private readonly IMonitorEnumerationService _monitorService;
@@ -72,12 +75,20 @@ public partial class MainWindow : Window
             await vm.RefreshDisplaysCommand.ExecuteAsync(null);
     }
 
-    /// <summary>窗口消息钩子 — 将 WM_HOTKEY 转发给 HotkeyService</summary>
+    /// <summary>窗口消息钩子 — 处理 WM_HOTKEY 及单实例激活消息</summary>
     private IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
     {
         if (msg == WM_HOTKEY)
         {
             _hotkeyService.HandleHotkeyMessage(wParam.ToInt32());
+            handled = true;
+        }
+        else if (msg == WM_ACTIVATE_INSTANCE)
+        {
+            // 由第二个实例发送，通过 WPF 自身渲染管线恢复窗口，避免直接 ShowWindow 导致的黑屏
+            Show();
+            WindowState = WindowState.Normal;
+            Activate();
             handled = true;
         }
         return IntPtr.Zero;
