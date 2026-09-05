@@ -41,6 +41,14 @@
 
 **风险**: 如果在用户态下不可用，则回退到注册表方案
 
+### 3.1 HDR 状态检测使用 Advanced Color Info v2
+
+**决策**: 检测 HDR 状态使用 `DISPLAYCONFIG_DEVICE_INFO_GET_ADVANCED_COLOR_INFO_2`（type 15）中的 `highDynamicRangeSupported` / `highDynamicRangeUserEnabled` 字段；设置 HDR 使用 `DISPLAYCONFIG_DEVICE_INFO_SET_HDR_STATE`（type 16），旧系统回退到 v1 API。
+
+**理由**:
+- v1 的 `advancedColorEnabled` 表示“任意一种高级颜色已启用”，宽色域（WCG / 10-bit）也会置 1，导致 HDR 未开启时误报“已开启”。
+- v2 提供独立的 HDR 标志，可准确区分 HDR 与 WCG，不会误报。
+
 ---
 
 ## 4. 系统托盘使用 Windows Forms NotifyIcon

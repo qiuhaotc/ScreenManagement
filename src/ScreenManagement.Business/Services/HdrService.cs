@@ -25,28 +25,8 @@ public class HdrService : IHdrService
         {
             try
             {
-                if (!TryGetAdapterTargetId(displayId, out long adapterId, out uint targetId))
-                    return false;
-
-                var request = new DISPLAYCONFIG_GET_ADVANCED_COLOR_INFO
-                {
-                    header = new DISPLAYCONFIG_DEVICE_INFO_HEADER
-                    {
-                        type = NativeTypes.DISPLAYCONFIG_DEVICE_INFO_GET_ADVANCED_COLOR_INFO,
-                        size = (uint)System.Runtime.InteropServices.Marshal.SizeOf<DISPLAYCONFIG_GET_ADVANCED_COLOR_INFO>(),
-                        adapterId = adapterId,
-                        id = targetId
-                    }
-                };
-
-                int error = NativeMethods.DisplayConfigGetDeviceInfo(ref request);
-                if (error != NativeTypes.ERROR_SUCCESS)
-                {
-                    _logger.LogWarning("DisplayConfigGetDeviceInfo for HDR status failed: {Error}", error);
-                    return false;
-                }
-
-                return request.AdvancedColorEnabled;
+                var (success, _, enabled) = QueryHdrState(displayId);
+                return success && enabled;
             }
             catch (Exception ex)
             {
@@ -66,21 +46,7 @@ public class HdrService : IHdrService
                 if (!TryGetAdapterTargetId(displayId, out long adapterId, out uint targetId))
                     return false;
 
-                var request = new DISPLAYCONFIG_SET_ADVANCED_COLOR_STATE
-                {
-                    header = new DISPLAYCONFIG_DEVICE_INFO_HEADER
-                    {
-                        type = NativeTypes.DISPLAYCONFIG_DEVICE_INFO_SET_ADVANCED_COLOR_STATE,
-                        size = (uint)System.Runtime.InteropServices.Marshal.SizeOf<DISPLAYCONFIG_SET_ADVANCED_COLOR_STATE>(),
-                        adapterId = adapterId,
-                        id = targetId
-                    },
-                    state = enable
-                        ? NativeTypes.DISPLAYCONFIG_ADVANCED_COLOR_ENABLED
-                        : NativeTypes.DISPLAYCONFIG_ADVANCED_COLOR_DISABLED
-                };
-
-                int error = NativeMethods.DisplayConfigSetDeviceInfo(ref request);
+                int error = SetHdrState(adapterId, targetId, enable);
                 if (error != NativeTypes.ERROR_SUCCESS)
                 {
                     _logger.LogError("DisplayConfigSetDeviceInfo for HDR failed: {Error}", error);
@@ -111,28 +77,105 @@ public class HdrService : IHdrService
     {
         try
         {
-            if (!TryGetAdapterTargetId(displayId, out long adapterId, out uint targetId))
-                return false;
-
-            var request = new DISPLAYCONFIG_GET_ADVANCED_COLOR_INFO
-            {
-                header = new DISPLAYCONFIG_DEVICE_INFO_HEADER
-                {
-                    type = NativeTypes.DISPLAYCONFIG_DEVICE_INFO_GET_ADVANCED_COLOR_INFO,
-                    size = (uint)System.Runtime.InteropServices.Marshal.SizeOf<DISPLAYCONFIG_GET_ADVANCED_COLOR_INFO>(),
-                    adapterId = adapterId,
-                    id = targetId
-                }
-            };
-
-            int error = NativeMethods.DisplayConfigGetDeviceInfo(ref request);
-            return error == NativeTypes.ERROR_SUCCESS && request.AdvancedColorSupported;
+            var (success, supported, _) = QueryHdrState(displayId);
+            return success && supported;
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "SupportsHdr failed for {DisplayId}", displayId);
             return false;
         }
+    }
+
+    /// <summary>
+    /// 查询显示器的 HDR 能力与状态。
+    /// 优先使用 v2（Windows 10 2004+）：v2 提供独立的 HDR 标志
+    /// （highDynamicRangeSupported / highDynamicRangeUserEnabled），
+    /// 可区分 HDR 与仅宽色域 (WCG) 的“高级颜色”；旧系统回退到 v1。
+    /// </summary>
+    private (bool Success, bool SupportsHdr, bool HdrEnabled) QueryHdrState(string displayId)
+    {
+        if (!TryGetAdapterTargetId(displayId, out long adapterId, out uint targetId))
+            return (false, false, false);
+
+        // v2：HDR 专用标志
+        var request2 = new DISPLAYCONFIG_GET_ADVANCED_COLOR_INFO_2
+        {
+            header = new DISPLAYCONFIG_DEVICE_INFO_HEADER
+            {
+                type = NativeTypes.DISPLAYCONFIG_DEVICE_INFO_GET_ADVANCED_COLOR_INFO_2,
+                size = (uint)System.Runtime.InteropServices.Marshal.SizeOf<DISPLAYCONFIG_GET_ADVANCED_COLOR_INFO_2>(),
+                adapterId = adapterId,
+                id = targetId
+            }
+        };
+
+        if (NativeMethods.DisplayConfigGetDeviceInfo(ref request2) == NativeTypes.ERROR_SUCCESS)
+        {
+            return (true, request2.HighDynamicRangeSupported, request2.HighDynamicRangeUserEnabled);
+        }
+
+        // v1 回退（旧系统不支持 v2）：advancedColor 标志包含 WCG，无法严格区分 HDR
+        _logger.LogDebug("DisplayConfigGetDeviceInfo v2 not supported for {DisplayId}, falling back to v1", displayId);
+
+        var request1 = new DISPLAYCONFIG_GET_ADVANCED_COLOR_INFO
+        {
+            header = new DISPLAYCONFIG_DEVICE_INFO_HEADER
+            {
+                type = NativeTypes.DISPLAYCONFIG_DEVICE_INFO_GET_ADVANCED_COLOR_INFO,
+                size = (uint)System.Runtime.InteropServices.Marshal.SizeOf<DISPLAYCONFIG_GET_ADVANCED_COLOR_INFO>(),
+                adapterId = adapterId,
+                id = targetId
+            }
+        };
+
+        if (NativeMethods.DisplayConfigGetDeviceInfo(ref request1) == NativeTypes.ERROR_SUCCESS)
+        {
+            return (true, request1.AdvancedColorSupported, request1.AdvancedColorEnabled);
+        }
+
+        return (false, false, false);
+    }
+
+    /// <summary>
+    /// 设置 HDR 状态。优先使用 HDR 专用 API（DISPLAYCONFIG_SET_HDR_STATE，Windows 10 2004+），
+    /// 仅控制 HDR 而不影响 WCG；旧系统回退到 SET_ADVANCED_COLOR_STATE。
+    /// </summary>
+    private int SetHdrState(long adapterId, uint targetId, bool enable)
+    {
+        var request2 = new DISPLAYCONFIG_SET_HDR_STATE
+        {
+            header = new DISPLAYCONFIG_DEVICE_INFO_HEADER
+            {
+                type = NativeTypes.DISPLAYCONFIG_DEVICE_INFO_SET_HDR_STATE,
+                size = (uint)System.Runtime.InteropServices.Marshal.SizeOf<DISPLAYCONFIG_SET_HDR_STATE>(),
+                adapterId = adapterId,
+                id = targetId
+            },
+            value = enable ? 1u : 0u
+        };
+
+        int error = NativeMethods.DisplayConfigSetDeviceInfo(ref request2);
+        if (error == NativeTypes.ERROR_SUCCESS)
+            return error;
+
+        _logger.LogDebug("DisplayConfigSetDeviceInfo (SET_HDR_STATE) failed with {Error}, falling back to SET_ADVANCED_COLOR_STATE", error);
+
+        var request1 = new DISPLAYCONFIG_SET_ADVANCED_COLOR_STATE
+        {
+            header = new DISPLAYCONFIG_DEVICE_INFO_HEADER
+            {
+                type = NativeTypes.DISPLAYCONFIG_DEVICE_INFO_SET_ADVANCED_COLOR_STATE,
+                size = (uint)System.Runtime.InteropServices.Marshal.SizeOf<DISPLAYCONFIG_SET_ADVANCED_COLOR_STATE>(),
+                adapterId = adapterId,
+                id = targetId
+            },
+            state = enable
+                ? NativeTypes.DISPLAYCONFIG_ADVANCED_COLOR_ENABLED
+                : NativeTypes.DISPLAYCONFIG_ADVANCED_COLOR_DISABLED
+        };
+
+        return NativeMethods.DisplayConfigSetDeviceInfo(ref request1);
     }
 
     /// <summary>

@@ -64,6 +64,11 @@ public static class NativeMethods
     public static extern int DisplayConfigGetDeviceInfo(
         ref DISPLAYCONFIG_GET_ADVANCED_COLOR_INFO requestPacket);
 
+    /// <summary>获取高级颜色信息 v2（含独立 HDR 标志，Windows 10 2004+）</summary>
+    [DllImport(User32, SetLastError = true)]
+    public static extern int DisplayConfigGetDeviceInfo(
+        ref DISPLAYCONFIG_GET_ADVANCED_COLOR_INFO_2 requestPacket);
+
     /// <summary>设置显示设备信息</summary>
     [DllImport(User32, SetLastError = true)]
     public static extern int DisplayConfigSetDeviceInfo(
@@ -73,6 +78,11 @@ public static class NativeMethods
     [DllImport(User32, SetLastError = true)]
     public static extern int DisplayConfigSetDeviceInfo(
         ref DISPLAYCONFIG_SET_ADVANCED_COLOR_STATE requestPacket);
+
+    /// <summary>设置 HDR 状态（Windows 10 2004+）</summary>
+    [DllImport(User32, SetLastError = true)]
+    public static extern int DisplayConfigSetDeviceInfo(
+        ref DISPLAYCONFIG_SET_HDR_STATE requestPacket);
 
     // ══════════════════════════════════════════════
     // 全局快捷键 API

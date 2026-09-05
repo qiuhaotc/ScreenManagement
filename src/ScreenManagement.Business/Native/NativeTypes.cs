@@ -44,12 +44,21 @@ public static class NativeTypes
     public const uint DISPLAYCONFIG_DEVICE_INFO_SET_SUPPORT_VIRTUAL_RESOLUTION = 8;
     public const uint DISPLAYCONFIG_DEVICE_INFO_GET_ADVANCED_COLOR_INFO = 9;
     public const uint DISPLAYCONFIG_DEVICE_INFO_SET_ADVANCED_COLOR_STATE = 10;
+    public const uint DISPLAYCONFIG_DEVICE_INFO_GET_ADVANCED_COLOR_INFO_2 = 15;
+    public const uint DISPLAYCONFIG_DEVICE_INFO_SET_HDR_STATE = 16;
 
     // ──────────────────────────────────────────────
     // 高级颜色状态
     // ──────────────────────────────────────────────
     public const uint DISPLAYCONFIG_ADVANCED_COLOR_ENABLED = 1;
     public const uint DISPLAYCONFIG_ADVANCED_COLOR_DISABLED = 0;
+
+    // ──────────────────────────────────────────────
+    // 高级颜色模式（DISPLAYCONFIG_GET_ADVANCED_COLOR_INFO_2.activeColorMode）
+    // ──────────────────────────────────────────────
+    public const uint DISPLAYCONFIG_ADVANCED_COLOR_MODE_SDR = 0;
+    public const uint DISPLAYCONFIG_ADVANCED_COLOR_MODE_WCG = 1;
+    public const uint DISPLAYCONFIG_ADVANCED_COLOR_MODE_HDR = 2;
 
     // ──────────────────────────────────────────────
     // 窗口消息常量
@@ -229,6 +238,50 @@ public struct DISPLAYCONFIG_SET_ADVANCED_COLOR_STATE
 {
     public DISPLAYCONFIG_DEVICE_INFO_HEADER header;
     public uint state;
+}
+
+/// <summary>
+/// 高级颜色信息 v2（Windows 10 2004+）。
+/// 与 v1 不同，v2 提供独立的 HDR 标志，可区分 HDR 与普通宽色域 (WCG)。
+/// </summary>
+[StructLayout(LayoutKind.Sequential)]
+public struct DISPLAYCONFIG_GET_ADVANCED_COLOR_INFO_2
+{
+    public DISPLAYCONFIG_DEVICE_INFO_HEADER header;
+
+    // 位域打包在 value 中（v2 布局与 v1 不同）:
+    //   bit0  advancedColorSupported
+    //   bit1  advancedColorActive
+    //   bit2  reserved1
+    //   bit3  advancedColorLimitedByPolicy
+    //   bit4  highDynamicRangeSupported
+    //   bit5  highDynamicRangeUserEnabled
+    //   bit6  wideColorSupported
+    //   bit7  wideColorUserEnabled
+    public uint value;
+    public uint colorEncoding;
+    public uint bitsPerColorChannel;
+    public uint activeColorMode; // DISPLAYCONFIG_ADVANCED_COLOR_MODE: 0=SDR, 1=WCG, 2=HDR
+
+    public readonly bool AdvancedColorSupported => (value & 0x01) != 0;
+    public readonly bool AdvancedColorActive => (value & 0x02) != 0;
+    public readonly bool HighDynamicRangeSupported => (value & 0x10) != 0;
+    public readonly bool HighDynamicRangeUserEnabled => (value & 0x20) != 0;
+    public readonly bool WideColorSupported => (value & 0x40) != 0;
+    public readonly bool WideColorUserEnabled => (value & 0x80) != 0;
+}
+
+/// <summary>设置 HDR 状态（Windows 10 2004+），仅控制 HDR，不影响 WCG。</summary>
+[StructLayout(LayoutKind.Sequential)]
+public struct DISPLAYCONFIG_SET_HDR_STATE
+{
+    public DISPLAYCONFIG_DEVICE_INFO_HEADER header;
+
+    // 位域打包在 value 中:
+    //   bit0  enableHdr
+    public uint value;
+
+    public readonly bool EnableHdr => (value & 0x01) != 0;
 }
 
 [StructLayout(LayoutKind.Sequential)]
